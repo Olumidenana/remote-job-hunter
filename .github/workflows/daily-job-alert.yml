@@ -1,0 +1,21 @@
+name: Daily Remote Job Hunter Alert
+
+on:
+  schedule:
+    # Runs every day at 07:00 UTC (8:00 AM WAT)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  job-alert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Remote Job Digest
+        run: |
+          DEPLOYED_URL="${{ secrets.VERCEL_APP_URL }}"
+          if [ -z "$DEPLOYED_URL" ]; then
+            echo "VERCEL_APP_URL not set, skipping remote ping. You can add your Vercel deployment URL to GitHub Repository Secrets!"
+          else
+            echo "Triggering daily alert at $DEPLOYED_URL/api/cron/daily-jobs..."
+            curl -s -X POST "$DEPLOYED_URL/api/cron/daily-jobs"
+          fi
