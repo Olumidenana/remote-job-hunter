@@ -65,6 +65,7 @@ async function handleAutoApply(req: NextRequest) {
 
       const record: ApplicationRecord = {
         id: `test-app-${Date.now()}`,
+        messageId: dispatch.messageId,
         jobId: topJob.id,
         company: topJob.company,
         jobTitle: topJob.title,
@@ -107,6 +108,7 @@ async function handleAutoApply(req: NextRequest) {
 
         const record: ApplicationRecord = {
           id: `auto-app-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          messageId: dispatch.messageId,
           jobId: job.id,
           company: job.company,
           jobTitle: job.title,

@@ -39,6 +39,26 @@ export function OutboxDrawer({ isOpen, onClose, applications }: OutboxDrawerProp
           </button>
         </div>
 
+        {/* Verification Info Banner */}
+        <div className="bg-slate-950/80 border-b border-slate-800 p-4 text-xs text-slate-300 space-y-1.5">
+          <div className="font-bold text-cyan-400 flex items-center justify-between">
+            <span>🛡️ 3 Proof Layers of Delivery</span>
+            <a
+              href="https://resend.com/emails"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-cyan-300 hover:text-white underline font-semibold flex items-center gap-1"
+            >
+              Resend Delivery Logs ↗
+            </a>
+          </div>
+          <p className="text-slate-400 text-[11px] leading-relaxed">
+            1. <strong>Gmail BCC Audit:</strong> You receive an instant carbon copy of every application sent in your Gmail (<code className="text-cyan-300">olumideadeyeminana@gmail.com</code>).<br/>
+            2. <strong>Resend Logs:</strong> Every email gets an immutable <code className="text-amber-300">Message ID</code> tracked live on Resend.<br/>
+            3. <strong>Company Inbox Delivery:</strong> To send directly to company addresses using your own email address instead of forwarding from sandbox, connect your custom domain at <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline">resend.com/domains</a>.
+          </p>
+        </div>
+
         {/* List Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {applications.length === 0 ? (
@@ -92,9 +112,16 @@ export function OutboxDrawer({ isOpen, onClose, applications }: OutboxDrawerProp
                   </div>
                 )}
 
-                <div className="text-[10px] text-slate-500 flex items-center gap-1 pt-1">
-                  <Clock className="w-3 h-3" />
-                  <span>{new Date(app.sentAt).toLocaleString()}</span>
+                <div className="text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-1 pt-1 font-mono">
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{new Date(app.sentAt).toLocaleString()}</span>
+                  </div>
+                  {app.messageId && (
+                    <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                      ID: {app.messageId}
+                    </span>
+                  )}
                 </div>
               </div>
             ))

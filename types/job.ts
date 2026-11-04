@@ -109,6 +109,7 @@ export interface ApplicationPackage {
 
 export interface ApplicationRecord {
   id: string;
+  messageId?: string;
   jobId: string;
   company: string;
   jobTitle: string;

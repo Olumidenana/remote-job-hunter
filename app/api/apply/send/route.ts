@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
 
     const record = {
       id: `app-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      messageId: dispatchResult.messageId,
       jobId: job.id,
       company: job.company,
       jobTitle: job.title,
