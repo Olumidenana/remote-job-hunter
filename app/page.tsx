@@ -9,6 +9,7 @@ import { ApplyModal } from '@/components/ApplyModal';
 import { EmailDigestModal } from '@/components/EmailDigestModal';
 import { OutboxDrawer } from '@/components/OutboxDrawer';
 import { SprintWarRoom } from '@/components/SprintWarRoom';
+import { OutreachSection } from '@/components/OutreachSection';
 import {
   Search,
   RefreshCw,
@@ -40,6 +41,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'hn' | 'direct_email' | 'translated' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python'>('all');
   const [activeApplyJob, setActiveApplyJob] = useState<RemoteJob | null>(null);
+  const [activeMode, setActiveMode] = useState<'jobs' | 'outreach'>('jobs');
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOutboxOpen, setIsOutboxOpen] = useState(false);
   const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
@@ -275,6 +277,44 @@ export default function Home() {
           )}
         </div>
 
+        {/* Dual-Engine Mode Switcher */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <button
+            onClick={() => setActiveMode('jobs')}
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer shadow-md ${
+              activeMode === 'jobs'
+                ? 'bg-cyan-500 text-slate-950 shadow-cyan-500/20'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>Autonomous Inbound Job Hunter ({jobs.length} Positions)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveMode('outreach')}
+            className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer shadow-md ${
+              activeMode === 'outreach'
+                ? 'bg-gradient-to-r from-red-500 to-amber-500 text-slate-950 shadow-red-500/20'
+                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Globe2 className="w-4 h-4" />
+            <span>Proactive Problem-Solver Outreach (5 Global Sectors)</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-950 text-red-300 border border-red-800 font-mono">
+              NEW
+            </span>
+          </button>
+        </div>
+
+        {/* Mode: Proactive Problem-Solver Outreach */}
+        {activeMode === 'outreach' && (
+          <OutreachSection onDispatched={fetchJobs} />
+        )}
+
+        {/* Mode: Inbound Job Hunter */}
+        {activeMode === 'jobs' && (
+          <>
         {/* Action & Stats Control Bar */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-8 shadow-lg">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
@@ -451,6 +491,8 @@ export default function Home() {
             </div>
           )}
         </div>
+        </>
+        )}
 
         {/* Footer */}
         <footer className="mt-16 pt-8 border-t border-slate-800/80 text-center text-xs text-slate-500">

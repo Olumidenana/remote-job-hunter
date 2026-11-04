@@ -5,6 +5,8 @@ import { DEFAULT_CANDIDATE } from '@/lib/profile';
 import { generateApplicationPackage } from '@/lib/pitch-generator';
 import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
 import { recordApplication, isAlreadyApplied } from '@/lib/tracker';
+import { CURATED_OUTREACH_TARGETS, generateDiagnosticPitch } from '@/lib/outreach-engine';
+import { RemoteJob, ApplicationPackage } from '@/types/job';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +60,97 @@ async function handleJobAlert(req: NextRequest) {
       }
     }
 
-    // 2. Send Daily Digest to Olumide
+    // 2. Proactive Strategic Problem-Solver Outreach (Dispatches 1 high-urgency diagnostic pitch per day)
+    let proactiveOutreachDispatched: string | null = null;
+    const pendingOutreachTarget = CURATED_OUTREACH_TARGETS.find(
+      t => !isAlreadyApplied(t.id, t.company, 'Proactive Strategic Diagnostic Audit', t.contactEmail)
+    );
+
+    if (pendingOutreachTarget) {
+      try {
+        const pitchPkg = generateDiagnosticPitch(pendingOutreachTarget);
+        const pseudoJob: RemoteJob = {
+          id: pendingOutreachTarget.id,
+          title: `Architectural Diagnostic: ${pendingOutreachTarget.urgencyHook}`,
+          company: pendingOutreachTarget.company,
+          location: 'Global Proactive Outreach',
+          isWorldwide: true,
+          url: `https://${pendingOutreachTarget.domain}`,
+          applyUrl: `mailto:${pendingOutreachTarget.contactEmail}`,
+          source: 'Direct',
+          tags: [pendingOutreachTarget.sector.toLowerCase(), 'architecture'],
+          description: pendingOutreachTarget.diagnosedProblem,
+          publishedAt: new Date().toISOString(),
+          matchScore: 99,
+          matchReasons: [pendingOutreachTarget.urgencyHook],
+          synergyStack: ['Systems Architecture', 'Latency Reduction'],
+        };
+
+        const appPkg: ApplicationPackage = {
+          jobId: pendingOutreachTarget.id,
+          jobTitle: `Strategic Architecture Diagnostic`,
+          company: pendingOutreachTarget.company,
+          recipientEmail: pendingOutreachTarget.contactEmail,
+          subject: pitchPkg.subject,
+          hookPitch: pitchPkg.hookPitch,
+          fullCoverLetter: pitchPkg.fullBody,
+          mailtoUrl: pitchPkg.mailtoUrl,
+          recommendedCVFile: pitchPkg.recommendedCVFile,
+          recommendedCVName: pitchPkg.recommendedCVName,
+          instructions: {
+            recipientEmail: pendingOutreachTarget.contactEmail,
+            secretCodeWords: [],
+            detectedInstructions: [`Proactive diagnostic outreach for ${pendingOutreachTarget.sector}`],
+            requiredAnswers: [],
+            recommendedCV: pendingOutreachTarget.recommendedCV,
+            recommendedCVFile: pitchPkg.recommendedCVFile,
+            hasDirectEmail: true,
+            complianceConfidence: 100,
+          },
+          atsAnalysis: {
+            atsScore: 99,
+            matchingKeywords: ['systems', 'architecture'],
+            missingKeywords: [],
+            recommendedHeadline: 'Sovereign Architecture & High-Performance Systems Engineer',
+            tailoredSummary: pitchPkg.hookPitch,
+          },
+          safety: {
+            safetyScore: 100,
+            riskLevel: 'VERIFIED_SAFE',
+            flags: [],
+            reasons: ['Direct Verified Organization'],
+            isVerifiedCompany: true,
+          },
+        };
+
+        const outRes = await sendApplicationOnBehalf(pseudoJob, appPkg);
+        recordApplication({
+          id: `cron-outreach-${Date.now()}`,
+          messageId: outRes.messageId,
+          jobId: pendingOutreachTarget.id,
+          company: pendingOutreachTarget.company,
+          jobTitle: `Diagnostic Pitch: ${pendingOutreachTarget.sector}`,
+          recipientEmail: pendingOutreachTarget.contactEmail,
+          companyEmailPicked: pendingOutreachTarget.contactEmail,
+          actualDeliveredTo: outRes.actualDeliveredTo,
+          deliveryMode: outRes.deliveryMode,
+          mailtoUrl: pitchPkg.mailtoUrl,
+          subject: pitchPkg.subject,
+          status: (outRes.mode === 'LIVE_DISPATCH' ? 'SENT' : 'QUEUED'),
+          sentAt: new Date().toISOString(),
+          cvAttached: pitchPkg.recommendedCVFile,
+          complianceNotes: [
+            `Urgency Hook: ${pendingOutreachTarget.urgencyHook}`,
+            `Flagship: ${pendingOutreachTarget.candidateFlagshipUsed}`,
+          ],
+        });
+        proactiveOutreachDispatched = `${pendingOutreachTarget.company} (${pendingOutreachTarget.contactEmail})`;
+      } catch (outErr) {
+        console.error('Proactive outreach cron error:', outErr);
+      }
+    }
+
+    // 3. Send Daily Digest to Olumide
     const dispatchResult = await sendDailyDigest(
       scanResult.matchedJobs,
       scanResult.stats,
@@ -73,6 +165,7 @@ async function handleJobAlert(req: NextRequest) {
       highMatchCount: scanResult.stats.highMatchCount,
       urgentCount: scanResult.stats.urgentCount,
       autoAppliedJobs: autoDispatched,
+      proactiveOutreach: proactiveOutreachDispatched,
       digestDispatch: dispatchResult,
     });
   } catch (err: unknown) {
