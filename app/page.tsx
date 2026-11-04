@@ -64,7 +64,7 @@ export default function Home() {
     try {
       const url = isTest
         ? `/api/auto-apply?test=true&recipient=${encodeURIComponent(candidate.email)}`
-        : `/api/auto-apply?limit=5`;
+        : `/api/auto-apply?limit=25`;
 
       const res = await fetch(url, { method: 'POST' });
       const data = await res.json();
@@ -139,6 +139,11 @@ export default function Home() {
 
   useEffect(() => {
     fetchJobs();
+    // Background polling: automatically checks feeds every 30 minutes while dashboard is open
+    const interval = setInterval(() => {
+      fetchJobs();
+    }, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const appliedJobIds = useMemo(() => {

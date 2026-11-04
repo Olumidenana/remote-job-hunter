@@ -20,7 +20,7 @@ async function handleAutoApply(req: NextRequest) {
   try {
     const isTest = req.nextUrl.searchParams.get('test') === 'true';
     const testRecipient = req.nextUrl.searchParams.get('recipient') || DEFAULT_CANDIDATE.email;
-    const maxApplications = parseInt(req.nextUrl.searchParams.get('limit') || '5', 10);
+    const maxApplications = parseInt(req.nextUrl.searchParams.get('limit') || '25', 10);
 
     // 1. Fetch latest real-time jobs
     const scan = await fetchRemoteJobs();

@@ -28,14 +28,15 @@ async function handleJobAlert(req: NextRequest) {
 
     const scanResult = await fetchRemoteJobs();
     const recipient = req.nextUrl.searchParams.get('email') || DEFAULT_CANDIDATE.email;
+    const batchLimit = parseInt(req.nextUrl.searchParams.get('limit') || '25', 10);
 
-    // 1. Run Autonomous Auto-Apply for any new verified direct email jobs
+    // 1. Run Autonomous Auto-Apply for all new verified direct email jobs found
     const autoApplyTargets = scanResult.matchedJobs.filter(
       j => j.instructions?.hasDirectEmail &&
            j.matchScore >= 75 &&
            j.safety?.riskLevel === 'VERIFIED_SAFE' &&
            !isAlreadyApplied(j.id, j.company, j.title, j.instructions?.recipientEmail)
-    ).slice(0, 5);
+    ).slice(0, batchLimit);
 
     const autoDispatched: string[] = [];
     for (const job of autoApplyTargets) {
