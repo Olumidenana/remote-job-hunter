@@ -13,6 +13,7 @@ import {
   Mail,
   Briefcase,
   AlertCircle,
+  Eye,
 } from 'lucide-react';
 
 export default function Home() {
@@ -25,7 +26,7 @@ export default function Home() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'urgent' | 'top' | 'nextjs' | 'python' | 'fullstack' | 'fintech'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python' | 'fullstack' | 'fintech'>('all');
   const [activeApplyJob, setActiveApplyJob] = useState<RemoteJob | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -65,6 +66,10 @@ export default function Home() {
       if (!matchSearch) return false;
 
       // Filter category
+      if (selectedFilter === 'godseye') {
+        const text = `${job.title} ${job.tags.join(' ')} ${job.synergyStack.join(' ')} ${job.description}`.toLowerCase();
+        return text.includes('ai') || text.includes('machine learning') || text.includes('python') || text.includes('vision') || text.includes('quant') || text.includes('trading') || text.includes('stream') || text.includes('systems') || text.includes('fastapi');
+      }
       if (selectedFilter === 'urgent') return job.urgent;
       if (selectedFilter === 'top') return job.matchScore >= 88;
       if (selectedFilter === 'nextjs') {
@@ -104,7 +109,7 @@ export default function Home() {
                 Autonomous Remote Job Engine
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
-                Scans global remote feeds (RemoteOK, Arbeitnow, Jobicy, Remotive) matched against your GitHub portfolio.
+                Scans global remote feeds matched against your GitHub portfolio &amp; GOD'S EYE sovereign architecture.
               </p>
             </div>
 
@@ -143,7 +148,7 @@ export default function Home() {
               <div className="text-xl font-bold font-mono text-rose-400 mt-0.5">{stats.urgentCount}</div>
             </div>
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-xs text-slate-400">Avg Candidate Score</div>
+              <div className="text-xs text-slate-400">Avg Compatibility</div>
               <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">{stats.averageScore}%</div>
             </div>
           </div>
@@ -164,6 +169,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'all', label: 'All Matches' },
+                { id: 'godseye', label: "👁️ GOD'S EYE / Quant" },
                 { id: 'urgent', label: 'Urgent ⚡' },
                 { id: 'top', label: 'Top Fit (90%+)' },
                 { id: 'nextjs', label: 'Next.js / React' },

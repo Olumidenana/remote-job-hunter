@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CandidateProfile } from '@/types/job';
-import { ExternalLink, Github, Mail, Phone, MapPin, Sparkles, Code2, Globe } from 'lucide-react';
+import { ExternalLink, Github, Mail, Phone, MapPin, Sparkles, Code2, Globe, ShieldAlert, Cpu } from 'lucide-react';
 
 interface CandidateHeaderProps {
   candidate: CandidateProfile & {
@@ -27,6 +27,10 @@ export function CandidateHeader({ candidate }: CandidateHeaderProps) {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               Available for Immediate Remote Hire This Week
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300 bg-amber-950/60 px-3 py-1 rounded-full border border-amber-800/60 shadow-sm">
+              <Cpu className="w-3.5 h-3.5 text-amber-400" />
+              Flagship: GOD'S EYE Sovereign Engine
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-mono text-slate-400 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700">
               <Github className="w-3.5 h-3.5 text-slate-300" />
@@ -75,10 +79,10 @@ export function CandidateHeader({ candidate }: CandidateHeaderProps) {
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Code2 className="w-4 h-4 text-cyan-400" />
-              Verified Production Stack
+              Verified Sovereign Stack
             </span>
-            <span className="text-xs text-slate-400">
-              {candidate.githubStats?.publicRepos ?? 18} public repos
+            <span className="text-xs text-slate-400 font-mono">
+              {candidate.githubStats?.publicRepos ?? 18} Repos
             </span>
           </div>
 
@@ -94,9 +98,14 @@ export function CandidateHeader({ candidate }: CandidateHeaderProps) {
             <span className="px-2 py-0.5 rounded text-xs text-slate-400">+6 more</span>
           </div>
 
-          <div className="text-xs text-slate-400 border-t border-slate-700/50 pt-2 flex items-center justify-between">
-            <span>Shipped: ICT Flux (Quant/WS) · ChopOS (POS) · ToonForge (3D)</span>
-            <span className="text-emerald-400 font-medium">100% Remote-Ready</span>
+          <div className="text-xs text-slate-300 border-t border-slate-700/50 pt-2 flex flex-col gap-1">
+            <div className="flex items-center justify-between text-amber-300 font-medium">
+              <span>⚡ GOD'S EYE: Satellite SAR + MT5/FIX</span>
+              <span className="text-emerald-400 text-[11px]">100% Tested</span>
+            </div>
+            <div className="text-slate-400 text-[11px]">
+              ChopOS (PostgreSQL Locks) · ICT Flux (73+ WS) · ToonForge
+            </div>
           </div>
         </div>
       </div>

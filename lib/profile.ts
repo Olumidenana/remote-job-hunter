@@ -2,7 +2,7 @@ import { CandidateProfile } from '@/types/job';
 
 export const DEFAULT_CANDIDATE: CandidateProfile = {
   name: 'Olumide Adeyemi-Nana',
-  headline: 'Full-Stack Systems Engineer & FinTech Architect',
+  headline: 'Full-Stack Systems Engineer & Sovereign Architecture Quant',
   email: 'olumideadeyeminana@gmail.com',
   phone: '+234 814 964 0122',
   location: 'Lagos / Osun, Nigeria (Open to Worldwide / Global Remote)',
@@ -14,38 +14,47 @@ export const DEFAULT_CANDIDATE: CandidateProfile = {
     'Next.js',
     'React',
     'Node.js',
-    'Python',
+    'Python (3.12)',
     'FastAPI',
-    'PostgreSQL',
+    'PostgreSQL / TimescaleDB',
+    'Redis Streams',
     'WebSockets',
-    'Supabase',
-    'Redis',
+    'OpenCV',
     'Three.js',
+    'Supabase',
     'Docker',
     'Vercel',
     'Tailwind CSS',
-    'SQL',
+    'FIX Protocol 4.4',
     'C FFI',
   ],
   specialties: [
-    'Full-Stack Web Development',
-    'High-Concurrency Systems & WebSockets',
-    'FinTech & Escrow Split Payments',
-    'ACID Row-Level Locking Database Architecture',
-    'Browser-Native WebGL 3D & Canvas Pipelines',
-    'Cloud Audio/Video Transcoding (FFMPEG)',
-    'Algorithmic Trading & Real-Time Event Routing',
+    "GOD'S EYE Sovereign Intelligence & Satellite Earth Observation",
+    'Full-Stack Systems Architecture (Next.js & FastAPI)',
+    'Algorithmic Execution & FIX Protocol / MetaTrader Gateways',
+    'High-Concurrency Streams (Redis Streams & 73+ Concurrent WebSockets)',
+    'Computer Vision (OpenCV Maritime Density & Hough Oil Tank Fill %)',
+    'FinTech & Escrow Split Payments (Paystack Multi-Split)',
+    'ACID Row-Level Locking Database Engineering',
+    'Browser-Native WebGL 3D & Cloud FFMPEG Transcoding',
   ],
   keyProjects: [
     {
-      name: 'ICT Flux',
-      description: 'Algorithmic quantitative trading platform routing 73+ concurrent live WebSocket feeds with zero-lookahead event routing and C FFI bindings to MetaTrader.',
+      name: "GOD'S EYE · Sovereign Intelligence & Automated Execution Platform (Tier 1 Flagship)",
+      description: "Institutional-grade sovereign market intelligence platform bridging physical satellite earth observation (ESA Copernicus Sentinel-1 SAR & Sentinel-2 optical imagery via OpenCV), real-time SEC EDGAR token-bucket streams, Redis Streams event bus, TimescaleDB, and deterministic Two-Key Synthesis algorithmic trade execution via MetaTrader 5 and FIX Protocol 4.4.",
+      metrics: "16/16 test suites passing (100%), token-bucket 9.0 req/s rate-limiting, Bayesian Noisy-OR resonance corroboration, Hough Circle oil tank fill measurement, <100ms algorithmic execution",
+      tech: ['Python 3.12', 'FastAPI', 'Next.js 14', 'TimescaleDB', 'Redis Streams', 'OpenCV', 'ESA Copernicus API', 'SEC EDGAR', 'FIX 4.4', 'MetaTrader 5', 'Docker'],
+      relevanceTags: ['ai', 'machine-learning', 'computer-vision', 'satellite', 'python', 'fastapi', 'nextjs', 'fullstack', 'timescaledb', 'postgresql', 'redis', 'quant', 'fintech', 'low-latency', 'streaming', 'data-engineering', 'systems', 'trading']
+    },
+    {
+      name: 'ICT Flux · High-Frequency Quant Trading Engine',
+      description: 'Algorithmic quantitative trading platform routing 73+ concurrent live WebSocket feeds with zero-lookahead event routing and C FFI bindings to MetaTrader terminals.',
       metrics: '<100ms execution latency under severe market volatility, 73+ feeds concurrent streaming',
       tech: ['Python', 'asyncio', 'WebSockets', 'C FFI', 'MetaTrader', 'FastAPI'],
       relevanceTags: ['python', 'backend', 'websocket', 'quant', 'fintech', 'low-latency', 'concurrency', 'streaming', 'crypto', 'trading']
     },
     {
-      name: 'ChopOS',
+      name: 'ChopOS · Merchant Operating System & Escrow Engine',
       description: 'Hyperlocal merchant delivery & POS operating system with automated Paystack split-payment escrow, strict PostgreSQL row-level locks, and sub-3s Kitchen Display System over WebSockets.',
       metrics: '100% elimination of double-spending via row-level locks, sub-3s order sync latency',
       tech: ['Next.js', 'TypeScript', 'PostgreSQL', 'Paystack API', 'WebSockets', 'Node.js', 'Tailwind CSS'],
@@ -85,7 +94,7 @@ export async function fetchLiveGitHubProfile(): Promise<{
     if (!res.ok) {
       return {
         publicRepos: 18,
-        recentProjects: ['gods-eye', 'ojaja-cinemas', 'olumide-portfolio', 'chopos', 'ict-flux'],
+        recentProjects: ['gods-eye', 'gods-eye-v3', 'gods-eye-flux', 'ojaja-cinemas', 'olumide-portfolio', 'chopos'],
         lastUpdated: new Date().toISOString(),
       };
     }
@@ -100,7 +109,7 @@ export async function fetchLiveGitHubProfile(): Promise<{
     console.error('Failed to fetch live GitHub stats:', err);
     return {
       publicRepos: 18,
-      recentProjects: ['gods-eye', 'ojaja-cinemas', 'olumide-portfolio', 'chopos', 'ict-flux'],
+      recentProjects: ['gods-eye', 'gods-eye-v3', 'gods-eye-flux', 'ojaja-cinemas', 'olumide-portfolio', 'chopos'],
       lastUpdated: new Date().toISOString(),
     };
   }
