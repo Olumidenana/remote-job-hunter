@@ -22,20 +22,30 @@ const IGNORED_EMAILS = [
 ];
 
 export function analyzeJobInstructions(job: Pick<RemoteJob, 'title' | 'company' | 'description' | 'applyUrl' | 'tags'>): InstructionAnalysis {
-  const text = `${job.title}\n${job.description}\n${job.applyUrl}`;
+  // Pre-process text to de-obfuscate emails commonly found in HN posts (e.g. "alex [at] startup.io")
+  const deobfuscated = job.description
+    .replace(/\s*\[at\]\s*|\s*\(at\)\s*|\s+at\s+/gi, '@')
+    .replace(/\s*\[dot\]\s*|\s*\(dot\)\s*|\s+dot\s+/gi, '.');
+
+  const text = `${job.title}\n${job.description}\n${deobfuscated}\n${job.applyUrl}`;
   const detectedInstructions: string[] = [];
   const secretCodeWords: string[] = [];
   const requiredAnswers: { question: string; answer: string }[] = [];
 
   // 1. Extract direct recipient email if present
   let recipientEmail: string | undefined = undefined;
+  let isEmailInferred = false;
+  let emailSource: InstructionAnalysis['emailSource'] = undefined;
+
   const matches = text.match(EMAIL_REGEX) || [];
   for (const m of matches) {
     const cleanEmail = m.toLowerCase().trim();
     const isIgnored = IGNORED_EMAILS.some(ign => cleanEmail.includes(ign));
-    if (!isIgnored) {
+    if (!isIgnored && cleanEmail.includes('.') && !cleanEmail.endsWith('.')) {
       recipientEmail = cleanEmail;
-      detectedInstructions.push(`Direct hiring email detected: ${recipientEmail}`);
+      isEmailInferred = false;
+      emailSource = 'EXPLICIT_BODY';
+      detectedInstructions.push(`Direct hiring email detected in job listing: ${recipientEmail}`);
       break;
     }
   }
@@ -43,7 +53,29 @@ export function analyzeJobInstructions(job: Pick<RemoteJob, 'title' | 'company' 
   // If no direct email in text, check if applyUrl is a mailto:
   if (!recipientEmail && job.applyUrl.startsWith('mailto:')) {
     recipientEmail = job.applyUrl.replace('mailto:', '').split('?')[0].trim();
+    isEmailInferred = false;
+    emailSource = 'MAILTO_LINK';
     detectedInstructions.push(`Direct application mailto link detected: ${recipientEmail}`);
+  }
+
+  // If still no direct email, infer the company hiring desk email from company name or ATS slug
+  if (!recipientEmail) {
+    let companySlug = '';
+
+    // Check if applyUrl has ATS company slug (e.g. jobs.lever.co/supabase or boards.greenhouse.io/monzo)
+    const atsMatch = job.applyUrl.match(/(?:lever\.co|greenhouse\.io|ashbyhq\.com|workable\.com)\/([a-zA-Z0-9_\-]+)/i);
+    if (atsMatch && atsMatch[1]) {
+      companySlug = atsMatch[1].toLowerCase().replace(/[^a-z0-9]/g, '');
+    } else if (job.company && !job.company.includes('HN') && !job.company.includes('Unknown')) {
+      companySlug = job.company.toLowerCase().replace(/[^a-z0-9]/g, '');
+    }
+
+    if (companySlug && companySlug.length >= 3) {
+      recipientEmail = `jobs@${companySlug}.com`;
+      isEmailInferred = true;
+      emailSource = 'COMPANY_DOMAIN';
+      detectedInstructions.push(`Company hiring inbox inferred: ${recipientEmail}`);
+    }
   }
 
   // 2. Detect Subject Line Directives
@@ -142,6 +174,8 @@ export function analyzeJobInstructions(job: Pick<RemoteJob, 'title' | 'company' 
 
   return {
     recipientEmail,
+    isEmailInferred,
+    emailSource,
     customSubject,
     secretCodeWords,
     detectedInstructions,

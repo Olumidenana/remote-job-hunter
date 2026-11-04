@@ -124,6 +124,16 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
             <span className="text-slate-600">·</span>
             <span className="text-cyan-500 text-xs font-mono">{job.source}</span>
           </div>
+
+          {instructions?.recipientEmail && (
+            <div className="mt-2 text-[11px] font-mono text-slate-300 bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 flex flex-wrap items-center justify-between gap-1">
+              <span className="flex items-center gap-1.5 text-cyan-400">
+                <Mail className="w-3 h-3" />
+                <span>{instructions.isEmailInferred ? 'Company Desk Email:' : 'Direct Recruiter Email:'}</span>
+              </span>
+              <span className="text-amber-300 font-bold">{instructions.recipientEmail}</span>
+            </div>
+          )}
         </div>
 
         {/* Salary if present */}

@@ -48,6 +48,8 @@ export interface RemoteJob {
 
 export interface InstructionAnalysis {
   recipientEmail?: string;
+  isEmailInferred?: boolean;
+  emailSource?: 'EXPLICIT_BODY' | 'MAILTO_LINK' | 'FOUNDER_POST' | 'COMPANY_DOMAIN';
   customSubject?: string;
   secretCodeWords: string[];
   detectedInstructions: string[];
@@ -113,7 +115,11 @@ export interface ApplicationRecord {
   jobId: string;
   company: string;
   jobTitle: string;
-  recipientEmail: string;
+  recipientEmail: string; // The exact email picked for the company
+  companyEmailPicked?: string;
+  actualDeliveredTo?: string; // Where the email landed (e.g. Company Inbox or Candidate Gmail Sandbox)
+  deliveryMode?: 'LIVE_COMPANY_INBOX' | 'SANDBOX_FORWARD_READY';
+  mailtoUrl?: string; // 1-click native client launcher
   subject: string;
   status: 'SENT' | 'QUEUED' | 'PORTAL';
   sentAt: string;

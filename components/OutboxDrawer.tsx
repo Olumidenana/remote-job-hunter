@@ -89,15 +89,42 @@ export function OutboxDrawer({ isOpen, onClose, applications }: OutboxDrawerProp
                   </span>
                 </div>
 
-                <div className="text-xs text-slate-400 flex flex-col gap-1 font-mono">
-                  <div className="flex items-center gap-1.5 text-slate-300">
-                    <Mail className="w-3.5 h-3.5 text-slate-500" />
-                    <span>To: {app.recipientEmail}</span>
+                <div className="text-xs text-slate-400 flex flex-col gap-1.5 font-mono bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <span className="text-slate-300 flex items-center gap-1.5 font-bold">
+                      <Mail className="w-3.5 h-3.5 text-amber-400" />
+                      Company Email Picked:
+                    </span>
+                    <span className="text-amber-300 font-bold text-[12px] bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/60">
+                      {app.companyEmailPicked || app.recipientEmail}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Paperclip className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Attached: {app.cvAttached}</span>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                    <span className="flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>{app.cvAttached}</span>
+                    </span>
+                    <span className="text-emerald-400 text-[10px] font-bold">
+                      {app.deliveryMode === 'LIVE_COMPANY_INBOX' ? 'Direct to Company' : 'Delivered to Your Gmail'}
+                    </span>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <a
+                    href={app.mailtoUrl || `mailto:${app.companyEmailPicked || app.recipientEmail}?subject=${encodeURIComponent(app.subject)}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 text-[11px] font-semibold transition cursor-pointer"
+                  >
+                    <Send className="w-3 h-3 text-cyan-400" />
+                    Open Draft in Email App
+                  </a>
+                  
+                  {app.messageId && (
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      Resend ID: {app.messageId.substring(0, 14)}...
+                    </span>
+                  )}
                 </div>
 
                 {app.complianceNotes && app.complianceNotes.length > 0 && (
