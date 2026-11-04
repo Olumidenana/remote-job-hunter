@@ -1,21 +1,22 @@
 import { NextResponse } from 'next/server';
 import { fetchRemoteJobs } from '@/lib/job-engine';
-import { fetchLiveGitHubProfile, DEFAULT_CANDIDATE } from '@/lib/profile';
+import { fetchLiveGitHubProfile, getDynamicCandidateProfile } from '@/lib/profile';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
   try {
-    const [scanResult, githubStats] = await Promise.all([
+    const [scanResult, githubStats, dynamicCandidate] = await Promise.all([
       fetchRemoteJobs(),
       fetchLiveGitHubProfile(),
+      getDynamicCandidateProfile(),
     ]);
 
     return NextResponse.json({
       success: true,
       candidate: {
-        ...DEFAULT_CANDIDATE,
+        ...dynamicCandidate,
         githubStats,
       },
       ...scanResult,

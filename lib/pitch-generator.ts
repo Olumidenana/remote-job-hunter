@@ -2,20 +2,27 @@ import { RemoteJob, ApplicationPackage } from '@/types/job';
 import { DEFAULT_CANDIDATE } from './profile';
 import { analyzeJobInstructions } from './instruction-reader';
 
-export function generateApplicationPackage(job: RemoteJob): ApplicationPackage {
-  const candidate = DEFAULT_CANDIDATE;
+export function generateApplicationPackage(job: RemoteJob, customCandidate?: typeof DEFAULT_CANDIDATE): ApplicationPackage {
+  const candidate = customCandidate || DEFAULT_CANDIDATE;
   const instructions = job.instructions || analyzeJobInstructions(job);
 
-  const isGodsEyeFit = job.tags.some(t => /ai|ml|vision|python|fastapi|backend|data|satellite|stream|redis|timescale|quant|trading|systems|security/i.test(t)) || 
-                       /ai|machine learning|python|fastapi|backend|quant|systems|data engineer|architect|trading/i.test(job.title);
-  const isFrontendOr3D = job.tags.some(t => /three\.?js|webgl|frontend|ui|animation|canvas/i.test(t)) ||
-                         /frontend|three\.?js|3d|ui/i.test(job.title);
+  // Dynamically select the best project from candidate.keyProjects (including newly synced GitHub repos)
+  const jobWords = `${job.title} ${job.tags.join(' ')} ${job.synergyStack.join(' ')} ${job.description}`.toLowerCase();
+  let relevantProject = candidate.keyProjects[0]; // GOD'S EYE as Tier 1 flagship default
+  let bestMatchScore = 0;
 
-  let relevantProject = candidate.keyProjects[0]; // GOD'S EYE as default Tier 1 Flagship
-  if (isFrontendOr3D) {
-    relevantProject = candidate.keyProjects[3]; // ToonForge
-  } else if (!isGodsEyeFit) {
-    relevantProject = candidate.keyProjects[2]; // ChopOS
+  for (const proj of candidate.keyProjects) {
+    let score = 0;
+    for (const tag of proj.relevanceTags) {
+      if (jobWords.includes(tag.toLowerCase())) score += 1;
+    }
+    for (const tech of proj.tech) {
+      if (jobWords.includes(tech.toLowerCase())) score += 2;
+    }
+    if (score > bestMatchScore) {
+      bestMatchScore = score;
+      relevantProject = proj;
+    }
   }
 
   // Determine Subject Line (adheres to instructions if detected)

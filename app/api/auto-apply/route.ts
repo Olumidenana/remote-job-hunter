@@ -36,8 +36,8 @@ async function handleAutoApply(req: NextRequest) {
         continue;
       }
 
-      // Check if already applied
-      if (isAlreadyApplied(job.id)) {
+      // Multi-factor Deduplication: Never apply twice to the same job, same company title, or same recipient
+      if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail)) {
         continue;
       }
 

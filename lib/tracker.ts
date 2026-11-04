@@ -50,7 +50,40 @@ export function recordApplication(record: ApplicationRecord): void {
   }
 }
 
-export function isAlreadyApplied(jobId: string): boolean {
+export function isAlreadyApplied(
+  jobId: string,
+  company?: string,
+  title?: string,
+  recipientEmail?: string
+): boolean {
   const history = getApplicationHistory();
-  return history.some(r => r.jobId === jobId);
+  return history.some((r) => {
+    // 1. Direct ID Match
+    if (r.jobId === jobId) return true;
+
+    // 2. Exact Recruiter Email Match (never send twice to the same email)
+    if (
+      recipientEmail &&
+      r.recipientEmail &&
+      recipientEmail.trim() !== '' &&
+      r.recipientEmail.toLowerCase().trim() === recipientEmail.toLowerCase().trim()
+    ) {
+      return true;
+    }
+
+    // 3. Company & Title Composite Match (prevents duplicate cross-posted jobs from multiple feeds)
+    if (company && title && r.company && r.jobTitle) {
+      const c1 = r.company.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const c2 = company.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (c1 === c2) {
+        const t1 = r.jobTitle.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const t2 = title.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (t1 === t2 || t1.includes(t2) || t2.includes(t1)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  });
 }

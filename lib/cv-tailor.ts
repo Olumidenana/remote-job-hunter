@@ -60,9 +60,21 @@ export function analyzeATSMatch(job: {
   };
 }
 
-export function generateTailoredCvHtml(job: RemoteJob): string {
-  const candidate = DEFAULT_CANDIDATE;
+export function generateTailoredCvHtml(job: RemoteJob, customCandidate?: typeof DEFAULT_CANDIDATE): string {
+  const candidate = customCandidate || DEFAULT_CANDIDATE;
   const ats = analyzeATSMatch(job);
+
+  // Score projects by relevance to job description
+  const jobWords = `${job.title} ${job.tags.join(' ')} ${job.description}`.toLowerCase();
+  const sortedProjects = [...candidate.keyProjects].sort((a, b) => {
+    let scoreA = 0;
+    let scoreB = 0;
+    a.relevanceTags.forEach(t => { if (jobWords.includes(t.toLowerCase())) scoreA += 1; });
+    a.tech.forEach(t => { if (jobWords.includes(t.toLowerCase())) scoreA += 2; });
+    b.relevanceTags.forEach(t => { if (jobWords.includes(t.toLowerCase())) scoreB += 1; });
+    b.tech.forEach(t => { if (jobWords.includes(t.toLowerCase())) scoreB += 2; });
+    return scoreB - scoreA;
+  });
 
   return `
     <!DOCTYPE html>
@@ -134,8 +146,8 @@ export function generateTailoredCvHtml(job: RemoteJob): string {
         </section>
 
         <section>
-          <div class="section-title">Production Systems & Track Record</div>
-          ${candidate.keyProjects.map(p => `
+          <div class="section-title">Production Systems & Shipped Track Record (GitHub Auto-Synced)</div>
+          ${sortedProjects.slice(0, 5).map(p => `
             <div class="job-item">
               <div class="job-header">
                 <span>${p.name}</span>

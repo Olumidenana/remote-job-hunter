@@ -10,11 +10,27 @@ interface CandidateHeaderProps {
       publicRepos: number;
       recentProjects: string[];
       lastUpdated: string;
+      latestPushedRepo?: string;
+      latestPushedAt?: string;
     };
   };
+  onRefreshProfile?: () => void;
 }
 
-export function CandidateHeader({ candidate }: CandidateHeaderProps) {
+export function CandidateHeader({ candidate, onRefreshProfile }: CandidateHeaderProps) {
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await fetch('/api/profile/sync?force=true');
+      if (onRefreshProfile) {
+        onRefreshProfile();
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white p-6 sm:p-8 rounded-2xl shadow-xl mb-8 relative overflow-hidden">
       {/* Background glow effect */}
@@ -84,6 +100,19 @@ export function CandidateHeader({ candidate }: CandidateHeaderProps) {
             <span className="text-xs text-slate-400 font-mono">
               {candidate.githubStats?.publicRepos ?? 18} Repos
             </span>
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-cyan-300 font-mono bg-slate-900/90 px-2.5 py-1.5 rounded-lg border border-slate-700/80 mb-3">
+            <span className="truncate max-w-[220px]">
+              ⚡ Pushed: <span className="text-white font-bold">{candidate.githubStats?.latestPushedRepo || 'remote-job-hunter'}</span>
+            </span>
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="text-[10px] text-cyan-400 hover:text-white underline font-bold cursor-pointer whitespace-nowrap ml-2 disabled:opacity-50"
+            >
+              {isSyncing ? 'Syncing...' : 'Sync Repos'}
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-1.5 mb-3">

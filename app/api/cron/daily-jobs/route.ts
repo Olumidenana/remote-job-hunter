@@ -4,7 +4,7 @@ import { sendDailyDigest } from '@/lib/mailer';
 import { DEFAULT_CANDIDATE } from '@/lib/profile';
 import { generateApplicationPackage } from '@/lib/pitch-generator';
 import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
-import { recordApplication } from '@/lib/tracker';
+import { recordApplication, isAlreadyApplied } from '@/lib/tracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +31,8 @@ async function handleJobAlert(req: NextRequest) {
     const autoApplyTargets = scanResult.matchedJobs.filter(
       j => j.instructions?.hasDirectEmail &&
            j.matchScore >= 75 &&
-           j.safety?.riskLevel === 'VERIFIED_SAFE'
+           j.safety?.riskLevel === 'VERIFIED_SAFE' &&
+           !isAlreadyApplied(j.id, j.company, j.title, j.instructions?.recipientEmail)
     ).slice(0, 5);
 
     const autoDispatched: string[] = [];

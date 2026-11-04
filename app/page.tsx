@@ -190,7 +190,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         
         {/* Candidate Profile Dossier Header */}
-        <CandidateHeader candidate={candidate} />
+        <CandidateHeader candidate={candidate} onRefreshProfile={fetchJobs} />
 
         {/* Autonomous Autopilot Command Center */}
         <div className="bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border-2 border-cyan-500/30 rounded-2xl p-5 mb-8 shadow-xl">
