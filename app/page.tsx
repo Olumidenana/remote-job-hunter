@@ -8,6 +8,7 @@ import { JobCard } from '@/components/JobCard';
 import { ApplyModal } from '@/components/ApplyModal';
 import { EmailDigestModal } from '@/components/EmailDigestModal';
 import { OutboxDrawer } from '@/components/OutboxDrawer';
+import { SprintWarRoom } from '@/components/SprintWarRoom';
 import {
   Search,
   RefreshCw,
@@ -16,7 +17,10 @@ import {
   AlertCircle,
   Send,
   ShieldCheck,
-  CheckCircle2,
+  Flame,
+  Globe2,
+  Award,
+  Zap,
 } from 'lucide-react';
 
 export default function Home() {
@@ -27,14 +31,17 @@ export default function Home() {
     highMatchCount: 0,
     averageScore: 0,
     directEmailCount: 0,
+    safeCount: 0,
+    suspiciousFilteredCount: 0,
   });
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'direct_email' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python' | 'fullstack' | 'fintech'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'hn' | 'direct_email' | 'translated' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python'>('all');
   const [activeApplyJob, setActiveApplyJob] = useState<RemoteJob | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOutboxOpen, setIsOutboxOpen] = useState(false);
+  const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -49,7 +56,14 @@ export default function Home() {
 
       if (jobsData.success) {
         setJobs(jobsData.matchedJobs || []);
-        setStats(jobsData.stats || { urgentCount: 0, highMatchCount: 0, averageScore: 0, directEmailCount: 0 });
+        setStats(jobsData.stats || {
+          urgentCount: 0,
+          highMatchCount: 0,
+          averageScore: 0,
+          directEmailCount: 0,
+          safeCount: 0,
+          suspiciousFilteredCount: 0,
+        });
         if (jobsData.candidate) {
           setCandidate(jobsData.candidate);
         }
@@ -74,7 +88,6 @@ export default function Home() {
   }, [applications]);
 
   const handleApplicationDispatched = (jobId: string) => {
-    // Refresh application history
     fetch('/api/apply/history')
       .then(res => res.json())
       .then(data => {
@@ -97,7 +110,9 @@ export default function Home() {
       if (!matchSearch) return false;
 
       // Filter category
+      if (selectedFilter === 'hn') return job.source === 'HackerNews';
       if (selectedFilter === 'direct_email') return job.instructions?.hasDirectEmail;
+      if (selectedFilter === 'translated') return job.translation?.isTranslated;
       if (selectedFilter === 'godseye') {
         const text = `${job.title} ${job.tags.join(' ')} ${job.synergyStack.join(' ')} ${job.description}`.toLowerCase();
         return text.includes('ai') || text.includes('machine learning') || text.includes('python') || text.includes('vision') || text.includes('quant') || text.includes('trading') || text.includes('stream') || text.includes('systems') || text.includes('fastapi');
@@ -111,14 +126,6 @@ export default function Home() {
       if (selectedFilter === 'python') {
         const text = `${job.title} ${job.tags.join(' ')} ${job.synergyStack.join(' ')}`.toLowerCase();
         return text.includes('python') || text.includes('fastapi') || text.includes('django');
-      }
-      if (selectedFilter === 'fullstack') {
-        const text = `${job.title} ${job.tags.join(' ')}`.toLowerCase();
-        return text.includes('full stack') || text.includes('full-stack') || text.includes('fullstack');
-      }
-      if (selectedFilter === 'fintech') {
-        const text = `${job.title} ${job.tags.join(' ')} ${job.description}`.toLowerCase();
-        return text.includes('fintech') || text.includes('payment') || text.includes('trading') || text.includes('quant');
       }
 
       return true;
@@ -136,16 +143,30 @@ export default function Home() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-8 shadow-lg">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
             <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded border border-emerald-800/60 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Scam Shield Active ({stats.safeCount} Verified Safe · {stats.suspiciousFilteredCount} Filtered)
+                </span>
+              </div>
               <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-cyan-400" />
-                Autonomous Remote Job Engine &amp; Auto-Apply Dispatcher
+                Worldwide Autonomous Job Engine &amp; Scam Shield
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
-                Analyzes job requirements, verifies anti-bot instructions, attaches your target CV, and sends emails on your behalf.
+                Scans HN Founders, RemoteOK, Arbeitnow, Jobicy &amp; Remotive. Translates foreign listings, customizes ATS CVs, and auto-dispatches.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setIsWarRoomOpen(true)}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer shadow-md shadow-amber-500/10"
+              >
+                <Flame className="w-4 h-4" />
+                30-Day Sprint War Room
+              </button>
+
               <button
                 onClick={() => setIsOutboxOpen(true)}
                 className="inline-flex items-center gap-2 bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/80 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
@@ -159,7 +180,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
               >
                 <Mail className="w-4 h-4 text-cyan-400" />
-                Daily Alert Setup
+                Daily Alert
               </button>
 
               <button
@@ -168,7 +189,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 disabled:opacity-50 text-slate-950 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer shadow-md shadow-cyan-500/10"
               >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? 'Scanning Feeds...' : 'Scan Jobs Now'}
+                {isLoading ? 'Scanning...' : 'Scan Now'}
               </button>
             </div>
           </div>
@@ -176,7 +197,7 @@ export default function Home() {
           {/* Quick Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-slate-800">
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-xs text-slate-400">Scanned Today</div>
+              <div className="text-xs text-slate-400">Total Scanned</div>
               <div className="text-xl font-bold font-mono text-white mt-0.5">{jobs.length}</div>
             </div>
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
@@ -188,8 +209,8 @@ export default function Home() {
               <div className="text-xl font-bold font-mono text-cyan-400 mt-0.5">{stats.highMatchCount}</div>
             </div>
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-xs text-slate-400">Urgent Roles (48h)</div>
-              <div className="text-xl font-bold font-mono text-rose-400 mt-0.5">{stats.urgentCount}</div>
+              <div className="text-xs text-slate-400">Scam Shield Verified</div>
+              <div className="text-xl font-bold font-mono text-emerald-300 mt-0.5">{stats.safeCount} Safe</div>
             </div>
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 col-span-2 sm:col-span-1">
               <div className="text-xs text-slate-400">Applications Sent</div>
@@ -213,14 +234,14 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'all', label: 'All Matches' },
+                { id: 'hn', label: '🔥 HN Founder Posts' },
                 { id: 'direct_email', label: '✉️ Direct Recruiter Email' },
                 { id: 'godseye', label: "👁️ GOD'S EYE / Quant" },
+                { id: 'translated', label: '🌐 Translated Non-English' },
                 { id: 'urgent', label: 'Urgent ⚡' },
                 { id: 'top', label: 'Top Fit (90%+)' },
                 { id: 'nextjs', label: 'Next.js / React' },
                 { id: 'python', label: 'Python / FastAPI' },
-                { id: 'fullstack', label: 'Full-Stack' },
-                { id: 'fintech', label: 'FinTech' },
               ].map((f) => (
                 <button
                   key={f.id}
@@ -245,7 +266,7 @@ export default function Home() {
               Showing <span className="text-white font-bold">{filteredJobs.length}</span> positions
             </span>
             <span className="text-xs text-slate-500">
-              Sorted by Match Score &amp; Instruction Compliance
+              Scam Shield &amp; ATS Compatibility Active
             </span>
           </div>
 
@@ -328,6 +349,13 @@ export default function Home() {
         isOpen={isOutboxOpen}
         onClose={() => setIsOutboxOpen(false)}
         applications={applications}
+      />
+
+      {/* 30-Day Employment Sprint War Room */}
+      <SprintWarRoom
+        isOpen={isWarRoomOpen}
+        onClose={() => setIsWarRoomOpen(false)}
+        sentCount={applications.length}
       />
     </main>
   );

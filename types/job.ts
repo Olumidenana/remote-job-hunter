@@ -1,3 +1,27 @@
+export interface SafetyAnalysis {
+  safetyScore: number; // 0 - 100 (100 = verified safe)
+  riskLevel: 'VERIFIED_SAFE' | 'CAUTION' | 'SUSPICIOUS_SCAM';
+  flags: string[];
+  reasons: string[];
+  isVerifiedCompany: boolean;
+}
+
+export interface TranslationData {
+  detectedLanguage: string;
+  isTranslated: boolean;
+  translatedTitle?: string;
+  translatedDescription?: string;
+  localLanguageGreeting?: string;
+}
+
+export interface ATSMatchAnalysis {
+  atsScore: number; // 0 - 100%
+  matchingKeywords: string[];
+  missingKeywords: string[];
+  recommendedHeadline: string;
+  tailoredSummary: string;
+}
+
 export interface RemoteJob {
   id: string;
   title: string;
@@ -7,7 +31,7 @@ export interface RemoteJob {
   isWorldwide: boolean;
   url: string;
   applyUrl: string;
-  source: 'RemoteOK' | 'Arbeitnow' | 'Jobicy' | 'Remotive' | 'HackerNews' | 'Direct';
+  source: 'HackerNews' | 'RemoteOK' | 'Arbeitnow' | 'Jobicy' | 'Remotive' | 'TwitterX' | 'Direct';
   tags: string[];
   description: string;
   salary?: string;
@@ -17,6 +41,9 @@ export interface RemoteJob {
   synergyStack: string[];
   urgent?: boolean;
   instructions?: InstructionAnalysis;
+  safety?: SafetyAnalysis;
+  translation?: TranslationData;
+  atsAnalysis?: ATSMatchAnalysis;
 }
 
 export interface InstructionAnalysis {
@@ -75,6 +102,9 @@ export interface ApplicationPackage {
   recommendedCVFile: string;
   recommendedCVName: string;
   instructions: InstructionAnalysis;
+  atsAnalysis: ATSMatchAnalysis;
+  safety: SafetyAnalysis;
+  translation?: TranslationData;
 }
 
 export interface ApplicationRecord {
@@ -99,5 +129,7 @@ export interface ScanResult {
     highMatchCount: number;
     averageScore: number;
     directEmailCount: number;
+    safeCount: number;
+    suspiciousFilteredCount: number;
   };
 }

@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Paperclip,
   CheckCircle2,
+  AlertTriangle,
+  Award,
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -25,6 +27,9 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
   const isTopMatch = job.matchScore >= 90;
   const isHighMatch = job.matchScore >= 80;
   const instructions = job.instructions;
+  const safety = job.safety;
+  const translation = job.translation;
+  const ats = job.atsAnalysis;
 
   const scoreBadgeBg = isTopMatch
     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
@@ -47,6 +52,14 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
               {job.matchScore}% Match
             </span>
 
+            {/* ATS Match Score */}
+            {ats && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-950/60 text-blue-300 border border-blue-800/60">
+                <Award className="w-3 h-3 text-blue-400" />
+                {ats.atsScore}% ATS
+              </span>
+            )}
+
             {isApplied && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
                 <CheckCircle2 className="w-3 h-3" />
@@ -54,10 +67,33 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
               </span>
             )}
 
+            {/* Safety & Scam Shield Pill */}
+            {safety && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono border ${
+                  safety.riskLevel === 'VERIFIED_SAFE'
+                    ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60'
+                    : 'text-amber-400 bg-amber-950/60 border-amber-800/60'
+                }`}
+                title={safety.flags.length > 0 ? safety.flags.join(', ') : 'Verified safe listing'}
+              >
+                <ShieldCheck className="w-3 h-3" />
+                {safety.riskLevel === 'VERIFIED_SAFE' ? 'Safe' : 'Caution'}
+              </span>
+            )}
+
+            {/* Translation Pill */}
+            {translation?.isTranslated && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-blue-300 bg-blue-950/50 border border-blue-800/50 font-mono">
+                <Globe2 className="w-3 h-3 text-blue-400" />
+                Translated
+              </span>
+            )}
+
             {job.urgent && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
                 <Flame className="w-3 h-3" />
-                Urgent Hire
+                Urgent
               </span>
             )}
 
@@ -65,13 +101,6 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-800/60">
                 <Mail className="w-3 h-3 text-cyan-400" />
                 Direct Email
-              </span>
-            )}
-
-            {instructions?.secretCodeWords && instructions.secretCodeWords.length > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono text-amber-300 bg-amber-950/60 border border-amber-800/60">
-                <ShieldCheck className="w-3 h-3 text-amber-400" />
-                Rules Verified
               </span>
             )}
           </div>
@@ -85,13 +114,15 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
         {/* Job Title & Company */}
         <div className="mb-3">
           <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-cyan-400 transition line-clamp-1">
-            {job.title}
+            {translation?.isTranslated ? translation.translatedTitle : job.title}
           </h2>
           <div className="flex items-center gap-2 text-sm text-slate-400 mt-0.5">
             <Building2 className="w-3.5 h-3.5 text-slate-500" />
             <span className="font-semibold text-slate-300">{job.company}</span>
             <span>·</span>
             <span className="text-slate-400 text-xs">{job.location}</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-cyan-500 text-xs font-mono">{job.source}</span>
           </div>
         </div>
 
@@ -104,7 +135,7 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
 
         {/* Description snippet */}
         <p className="text-xs sm:text-sm text-slate-400 line-clamp-3 mb-4 leading-relaxed">
-          {job.description}
+          {translation?.isTranslated && translation.translatedDescription ? translation.translatedDescription : job.description}
         </p>
 
         {/* Match Breakdown & Targeted CV */}
@@ -161,7 +192,7 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          {isApplied ? 'Review / Re-apply' : 'Apply Assistant (Email & CV)'}
+          {isApplied ? 'Review / Re-apply' : 'Apply Assistant (Tailored CV & Email)'}
         </button>
 
         <a

@@ -1,6 +1,10 @@
 import { RemoteJob, ScanResult } from '@/types/job';
 import { DEFAULT_CANDIDATE } from './profile';
 import { analyzeJobInstructions } from './instruction-reader';
+import { analyzeJobSafety } from './scam-shield';
+import { detectAndTranslateJob } from './translator';
+import { analyzeATSMatch } from './cv-tailor';
+import { fetchHackerNewsHiringJobs } from './social-feed-engine';
 
 interface ArbeitnowJob {
   slug: string;
@@ -124,8 +128,19 @@ function calculateMatchScore(title: string, tags: string[], description: string)
 export async function fetchRemoteJobs(): Promise<ScanResult> {
   const jobs: RemoteJob[] = [];
   const now = new Date();
+  let suspiciousCount = 0;
 
-  // 1. Fetch from Arbeitnow API
+  // 1. Fetch from Hacker News "Who is Hiring?" real-time founder thread
+  try {
+    const hnHiringJobs = await fetchHackerNewsHiringJobs();
+    for (const h of hnHiringJobs) {
+      jobs.push(h);
+    }
+  } catch (err) {
+    console.error('Error in HN hiring fetch:', err);
+  }
+
+  // 2. Fetch from Arbeitnow API
   try {
     const res = await fetch('https://www.arbeitnow.com/api/job-board-api', {
       headers: { 'User-Agent': 'RemoteJobHunter/1.0' },
@@ -144,6 +159,19 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
           const publishedDate = new Date(item.created_at * 1000);
           const isUrgent = (now.getTime() - publishedDate.getTime()) < 48 * 3600 * 1000;
 
+          const safety = analyzeJobSafety({
+            title: item.title,
+            company: item.company_name,
+            description: cleanDesc,
+            applyUrl: item.url,
+            source: 'Arbeitnow',
+          });
+
+          if (safety.riskLevel === 'SUSPICIOUS_SCAM') {
+            suspiciousCount++;
+            continue; // Filter out suspicious scam jobs!
+          }
+
           const instructions = analyzeJobInstructions({
             title: item.title,
             company: item.company_name,
@@ -151,6 +179,9 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
             applyUrl: item.url,
             tags: item.tags || [],
           });
+
+          const translation = detectAndTranslateJob(item.title, cleanDesc, item.company_name);
+          const atsAnalysis = analyzeATSMatch({ title: item.title, tags: item.tags || [], description: cleanDesc });
 
           jobs.push({
             id: `arbeitnow-${item.slug}`,
@@ -169,6 +200,9 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
             synergyStack: synergy,
             urgent: isUrgent,
             instructions,
+            safety,
+            translation,
+            atsAnalysis,
           });
         }
       }
@@ -177,7 +211,7 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
     console.error('Error fetching from Arbeitnow:', err);
   }
 
-  // 2. Fetch from Jobicy API
+  // 3. Fetch from Jobicy API
   try {
     const res = await fetch('https://jobicy.com/api/v2/remote-jobs?count=40', {
       headers: { 'User-Agent': 'RemoteJobHunter/1.0' },
@@ -195,6 +229,19 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
           const publishedDate = new Date(item.pubDate);
           const isUrgent = (now.getTime() - publishedDate.getTime()) < 48 * 3600 * 1000;
 
+          const safety = analyzeJobSafety({
+            title: item.jobTitle,
+            company: item.companyName,
+            description: cleanDesc,
+            applyUrl: item.url,
+            source: 'Jobicy',
+          });
+
+          if (safety.riskLevel === 'SUSPICIOUS_SCAM') {
+            suspiciousCount++;
+            continue;
+          }
+
           let salaryText: string | undefined = undefined;
           if (item.annualSalaryMin && item.annualSalaryMax) {
             salaryText = `${item.salaryCurrency || '$'}${item.annualSalaryMin.toLocaleString()} - ${item.salaryCurrency || '$'}${item.annualSalaryMax.toLocaleString()}/yr`;
@@ -207,6 +254,9 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
             applyUrl: item.url,
             tags: ['Remote', 'Engineering'],
           });
+
+          const translation = detectAndTranslateJob(item.jobTitle, cleanDesc, item.companyName);
+          const atsAnalysis = analyzeATSMatch({ title: item.jobTitle, tags: ['Remote', 'Engineering'], description: cleanDesc });
 
           jobs.push({
             id: `jobicy-${item.id}`,
@@ -227,6 +277,9 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
             synergyStack: synergy,
             urgent: isUrgent,
             instructions,
+            safety,
+            translation,
+            atsAnalysis,
           });
         }
       }
@@ -235,7 +288,7 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
     console.error('Error fetching from Jobicy:', err);
   }
 
-  // 3. Fetch from Remotive API
+  // 4. Fetch from Remotive API
   try {
     const res = await fetch('https://remotive.com/api/remote-jobs?category=software-dev&limit=30', {
       headers: { 'User-Agent': 'RemoteJobHunter/1.0' },
@@ -253,6 +306,19 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
           const publishedDate = new Date(item.publication_date);
           const isUrgent = (now.getTime() - publishedDate.getTime()) < 72 * 3600 * 1000;
 
+          const safety = analyzeJobSafety({
+            title: item.title,
+            company: item.company_name,
+            description: cleanDesc,
+            applyUrl: item.url,
+            source: 'Remotive',
+          });
+
+          if (safety.riskLevel === 'SUSPICIOUS_SCAM') {
+            suspiciousCount++;
+            continue;
+          }
+
           const instructions = analyzeJobInstructions({
             title: item.title,
             company: item.company_name,
@@ -260,6 +326,9 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
             applyUrl: item.url,
             tags: item.tags || ['Remote', 'Software'],
           });
+
+          const translation = detectAndTranslateJob(item.title, cleanDesc, item.company_name);
+          const atsAnalysis = analyzeATSMatch({ title: item.title, tags: item.tags || ['Remote', 'Software'], description: cleanDesc });
 
           jobs.push({
             id: `remotive-${item.id}`,
@@ -280,6 +349,9 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
             synergyStack: synergy,
             urgent: isUrgent,
             instructions,
+            safety,
+            translation,
+            atsAnalysis,
           });
         }
       }
@@ -307,6 +379,7 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
   const highMatchCount = uniqueJobs.filter(j => j.matchScore >= 85).length;
   const urgentCount = uniqueJobs.filter(j => j.urgent).length;
   const directEmailCount = uniqueJobs.filter(j => j.instructions?.hasDirectEmail).length;
+  const safeCount = uniqueJobs.filter(j => j.safety?.riskLevel === 'VERIFIED_SAFE').length;
   const averageScore = uniqueJobs.length > 0 
     ? Math.round(uniqueJobs.reduce((acc, j) => acc + j.matchScore, 0) / uniqueJobs.length)
     : 0;
@@ -320,6 +393,8 @@ export async function fetchRemoteJobs(): Promise<ScanResult> {
       highMatchCount,
       averageScore,
       directEmailCount,
+      safeCount,
+      suspiciousFilteredCount: suspiciousCount,
     },
   };
 }
