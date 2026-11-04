@@ -5,6 +5,7 @@ import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
 import { recordApplication, isAlreadyApplied, getApplicationHistory } from '@/lib/tracker';
 import { DEFAULT_CANDIDATE } from '@/lib/profile';
 import { ApplicationRecord, RemoteJob } from '@/types/job';
+import { getQuotaStatus } from '@/lib/quota-tracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,10 +97,21 @@ async function handleAutoApply(req: NextRequest) {
       });
     }
 
-    // Autonomous Mode: Process direct email matches first, then high matches
+    // Autonomous Mode: Check daily safety quota first
+    const quota = getQuotaStatus();
+    if (quota.isHardCapped || quota.remainingJobApps <= 0) {
+      return NextResponse.json({
+        success: true,
+        mode: 'QUOTA_LIMIT_PROTECTED',
+        message: `Daily job application quota reached (${quota.jobAppCount}/${quota.jobAppBudget} sent today). Pausing batch dispatches until midnight UTC to protect your Resend account.`,
+        quota,
+      });
+    }
+
+    const safeBatchLimit = Math.min(maxApplications, quota.remainingJobApps);
     const targetsToApply = directEmailJobs.length > 0
-      ? directEmailJobs.slice(0, maxApplications)
-      : eligibleJobs.slice(0, Math.min(2, maxApplications));
+      ? directEmailJobs.slice(0, safeBatchLimit)
+      : eligibleJobs.slice(0, Math.min(2, safeBatchLimit));
 
     const dispatchedRecords: ApplicationRecord[] = [];
     const dispatchNotes: string[] = [];

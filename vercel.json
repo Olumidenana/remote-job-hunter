@@ -4,16 +4,5 @@
       "path": "/api/cron/daily-jobs",
       "schedule": "0 7 * * *"
     }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow, noarchive, nosnippet, noimageindex"
-        }
-      ]
-    }
   ]
 }

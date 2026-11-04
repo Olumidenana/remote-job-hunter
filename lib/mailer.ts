@@ -1,6 +1,7 @@
 import { RemoteJob, ScanResult } from '@/types/job';
 import { DEFAULT_CANDIDATE } from './profile';
 import { generateApplicationPackage } from './pitch-generator';
+import { canDispatch, recordDispatchSuccess, paceResendDispatch, markResendDailyLimitExceeded } from './quota-tracker';
 
 export interface EmailDispatchResult {
   success: boolean;
@@ -155,8 +156,22 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
   const resendApiKey = process.env.RESEND_API_KEY;
   const htmlContent = buildEmailHtml(jobs, stats);
 
+  const quotaCheck = canDispatch('JOB_APP');
+  if (!quotaCheck.allowed) {
+    return {
+      success: true,
+      provider: 'PreviewMode',
+      recipient,
+      jobCount: jobs.length,
+      previewHtml: htmlContent,
+      note: `Daily Quota Guard: ${quotaCheck.reason}`,
+    };
+  }
+
   if (resendApiKey) {
     try {
+      await paceResendDispatch(650);
+
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -173,6 +188,7 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
 
       if (response.ok) {
         const data = await response.json();
+        recordDispatchSuccess('JOB_APP');
         return {
           success: true,
           provider: 'Resend',
@@ -180,6 +196,11 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
           messageId: data.id,
           jobCount: jobs.length,
         };
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 429 || JSON.stringify(errorData).toLowerCase().includes('quota')) {
+          markResendDailyLimitExceeded();
+        }
       }
     } catch (err) {
       console.error('Failed to send via Resend:', err);

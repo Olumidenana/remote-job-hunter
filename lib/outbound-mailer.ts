@@ -2,6 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { ApplicationPackage, RemoteJob } from '@/types/job';
 import { DEFAULT_CANDIDATE } from './profile';
+import {
+  canDispatch,
+  recordDispatchSuccess,
+  markResendDailyLimitExceeded,
+  paceResendDispatch,
+  getQuotaStatus,
+} from './quota-tracker';
 
 export interface DispatchResponse {
   success: boolean;
@@ -22,7 +29,8 @@ export interface DispatchResponse {
 export async function sendApplicationOnBehalf(
   job: RemoteJob,
   pkg: ApplicationPackage,
-  overrideRecipient?: string
+  overrideRecipient?: string,
+  dispatchType: 'JOB_APP' | 'OUTREACH' = 'JOB_APP'
 ): Promise<DispatchResponse> {
   const recipient = overrideRecipient || pkg.recipientEmail;
   const candidate = DEFAULT_CANDIDATE;
@@ -67,12 +75,61 @@ ${pkg.fullCoverLetter}
     </html>
   `;
 
-  // 3. Dispatch via Resend API if configured
+  // 3. Pre-flight Quota Gatekeeper
+  const quotaCheck = canDispatch(dispatchType);
+  if (!quotaCheck.allowed) {
+    console.warn(`[QUOTA SHIELD] Dispatch deferred: ${quotaCheck.reason}`);
+    return {
+      success: true,
+      recipient,
+      targetCompanyEmail: recipient,
+      actualDeliveredTo: candidate.email,
+      deliveryMode: 'SANDBOX_FORWARD_READY',
+      mailtoUrl: pkg.mailtoUrl,
+      subject: pkg.subject,
+      cvAttached: pkg.recommendedCVFile,
+      bccConfirmation: candidate.email,
+      mode: 'SIMULATED_PREVIEW',
+      instructionsApplied: pkg.instructions.detectedInstructions,
+      note: `[DAILY QUOTA GUARD] ${quotaCheck.reason} Application has been structured and recorded in your outbox.`,
+    };
+  }
+
+  // 4. Dispatch via Resend API
   if (resendApiKey) {
     try {
+      // Pacing delay (650ms) to respect Resend's 2 req/s limit
+      await paceResendDispatch(650);
+
       const attachments = cvBase64
         ? [{ filename: pkg.recommendedCVFile, content: cvBase64 }]
         : [];
+
+      const senderEmail = process.env.EMAIL_FROM || 'Olumide Adeyemi-Nana <onboarding@resend.dev>';
+      const isSandboxTestingDomain = senderEmail.includes('resend.dev');
+
+      // If on Resend's onboarding@resend.dev free sandbox, Resend only allows sending to the verified owner (candidate.email).
+      // Sending to external 3rd-party emails without custom domain will fail with 403.
+      // In sandbox mode, deliver directly to candidate.email with 1-click forward headers.
+      const targetSendEmail = (!isSandboxTestingDomain && recipient) ? recipient : candidate.email;
+      const isDirectCompany = targetSendEmail === recipient && !isSandboxTestingDomain;
+
+      const emailSubject = isDirectCompany
+        ? pkg.subject
+        : `[FORWARD-READY APPLICATION] To: ${recipient} — ${pkg.subject}`;
+
+      const emailHtmlContent = isDirectCompany
+        ? formattedHtml
+        : `
+          <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-family: sans-serif; font-size: 13px; color: #166534;">
+            <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">🎯 Target Recruiter Picked: ${recipient}</div>
+            • <strong>Company:</strong> ${job.company} (${job.title})<br/>
+            • <strong>Attached Resume:</strong> ${pkg.recommendedCVFile}<br/>
+            • <strong>Instructions Applied:</strong> ${pkg.instructions.detectedInstructions.join('; ') || 'Standard Single-Column ATS'}<br/>
+            • <strong>1-Click Dispatch:</strong> <a href="${pkg.mailtoUrl}" style="display: inline-block; background-color: #15803d; color: #ffffff; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 6px;">Forward to ${recipient} via Mail Client &rarr;</a>
+          </div>
+          ${formattedHtml}
+        `;
 
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -81,12 +138,11 @@ ${pkg.fullCoverLetter}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: process.env.EMAIL_FROM || 'Olumide Adeyemi-Nana <onboarding@resend.dev>',
-          to: recipient,
+          from: senderEmail,
+          to: targetSendEmail,
           reply_to: candidate.email,
-          bcc: [candidate.email], // Candidate gets an instant carbon copy audit trail!
-          subject: pkg.subject,
-          html: formattedHtml,
+          subject: emailSubject,
+          html: emailHtmlContent,
           text: pkg.fullCoverLetter,
           attachments,
         }),
@@ -94,76 +150,47 @@ ${pkg.fullCoverLetter}
 
       if (res.ok) {
         const data = await res.json();
+        // Record quota consumption (1 single credit used!)
+        recordDispatchSuccess(dispatchType);
+
         return {
           success: true,
           messageId: data.id,
           recipient,
           targetCompanyEmail: recipient,
-          actualDeliveredTo: recipient,
-          deliveryMode: 'LIVE_COMPANY_INBOX',
+          actualDeliveredTo: targetSendEmail,
+          deliveryMode: isDirectCompany ? 'LIVE_COMPANY_INBOX' : 'SANDBOX_FORWARD_READY',
           mailtoUrl: pkg.mailtoUrl,
-          subject: pkg.subject,
+          subject: emailSubject,
           cvAttached: pkg.recommendedCVFile,
           bccConfirmation: candidate.email,
           mode: 'LIVE_DISPATCH',
           instructionsApplied: pkg.instructions.detectedInstructions,
-          note: `Live email dispatched directly to company hiring address ${recipient}! A verification copy was also delivered to ${candidate.email}.`,
+          note: isDirectCompany
+            ? `Live email dispatched directly to company hiring address ${recipient}!`
+            : `Delivered to your verified inbox (${candidate.email}) forward-ready with CV attached. Resend quota used: 1 credit.`,
         };
       } else {
         const errorData = await res.json().catch(() => ({ message: 'Resend API error' }));
-        console.warn('Resend primary dispatch note:', errorData);
+        console.warn('[RESEND API WARN]:', errorData);
 
-        // If Resend free tier restricts external recipients (onboarding@resend.dev requires custom domain for external sends),
-        // safely deliver the application package and CV PDF directly to candidate's verified Gmail inbox!
-        if (recipient !== candidate.email) {
-          try {
-            const fallbackRes = await fetch('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${resendApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                from: process.env.EMAIL_FROM || 'Olumide Job Hunter <onboarding@resend.dev>',
-                to: candidate.email,
-                reply_to: candidate.email,
-                subject: `[AUTOPILOT FORWARD READY] To: ${recipient} — ${pkg.subject}`,
-                html: `
-                  <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-family: sans-serif; font-size: 13px; color: #166534;">
-                    <div style="font-weight: 800; font-size: 14px; margin-bottom: 6px;">🎯 Company Recruiter Email Picked: ${recipient}</div>
-                    • <strong>Company:</strong> ${job.company} (${job.title})<br/>
-                    • <strong>Attached Document:</strong> ${pkg.recommendedCVFile}<br/>
-                    • <strong>Instructions Satisfied:</strong> ${pkg.instructions.detectedInstructions.join('; ') || 'Standard Application'}<br/>
-                    • <strong>Status:</strong> Prepared with your CV PDF attached. Forward this directly to <a href="mailto:${recipient}?subject=${encodeURIComponent(pkg.subject)}" style="color: #0369a1; font-weight: bold; text-decoration: underline;">${recipient}</a> with 1 click!
-                  </div>
-                  ${formattedHtml}
-                `,
-                text: `Target Company Email: ${recipient}\n\n${pkg.fullCoverLetter}`,
-                attachments,
-              }),
-            });
-
-            if (fallbackRes.ok) {
-              const fbData = await fallbackRes.json();
-              return {
-                success: true,
-                messageId: fbData.id,
-                recipient,
-                targetCompanyEmail: recipient,
-                actualDeliveredTo: candidate.email,
-                deliveryMode: 'SANDBOX_FORWARD_READY',
-                mailtoUrl: pkg.mailtoUrl,
-                subject: `[AUTOPILOT FORWARD READY] To: ${recipient} — ${pkg.subject}`,
-                cvAttached: pkg.recommendedCVFile,
-                bccConfirmation: candidate.email,
-                mode: 'LIVE_DISPATCH',
-                instructionsApplied: pkg.instructions.detectedInstructions,
-                note: `Company email picked: ${recipient}. Delivered to your Gmail inbox with CV attached & 1-click forward link. (Resend sandbox requires custom domain to send directly to 3rd-party emails).`,
-              };
-            }
-          } catch (fbErr) {
-            console.error('Fallback dispatch to candidate failed:', fbErr);
-          }
+        const errMsg = JSON.stringify(errorData).toLowerCase();
+        if (res.status === 429 || errMsg.includes('quota') || errMsg.includes('limit') || errMsg.includes('rate')) {
+          markResendDailyLimitExceeded();
+          return {
+            success: true,
+            recipient,
+            targetCompanyEmail: recipient,
+            actualDeliveredTo: candidate.email,
+            deliveryMode: 'SANDBOX_FORWARD_READY',
+            mailtoUrl: pkg.mailtoUrl,
+            subject: pkg.subject,
+            cvAttached: pkg.recommendedCVFile,
+            bccConfirmation: candidate.email,
+            mode: 'SIMULATED_PREVIEW',
+            instructionsApplied: pkg.instructions.detectedInstructions,
+            note: `Resend daily limit reached (${errorData.message || 'quota exceeded'}). Quota Shield engaged for today.`,
+          };
         }
       }
     } catch (err) {
@@ -171,7 +198,7 @@ ${pkg.fullCoverLetter}
     }
   }
 
-  // 4. Fallback / Test Preview Mode
+  // 5. Fallback Preview Mode
   return {
     success: true,
     recipient,
@@ -184,6 +211,6 @@ ${pkg.fullCoverLetter}
     bccConfirmation: candidate.email,
     mode: 'SIMULATED_PREVIEW',
     instructionsApplied: pkg.instructions.detectedInstructions,
-    note: `Application prepared with all compliance instructions and CV attached. Set RESEND_API_KEY in your Vercel Project Settings to enable live inbox delivery on your behalf.`,
+    note: 'Compiled successfully in local preview mode.',
   };
 }

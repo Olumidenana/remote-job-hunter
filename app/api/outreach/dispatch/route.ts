@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    const dispatchResult = await sendApplicationOnBehalf(pseudoJob, applicationPkg);
+    const dispatchResult = await sendApplicationOnBehalf(pseudoJob, applicationPkg, undefined, 'OUTREACH');
 
     const record = {
       id: `outreach-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
