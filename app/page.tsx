@@ -21,6 +21,7 @@ import {
   Globe2,
   Award,
   Zap,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function Home() {
@@ -42,6 +43,58 @@ export default function Home() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOutboxOpen, setIsOutboxOpen] = useState(false);
   const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
+  const [isAutoApplying, setIsAutoApplying] = useState(false);
+  const [autoApplyFeedback, setAutoApplyFeedback] = useState<{
+    success: boolean;
+    message: string;
+    mode?: string;
+    recipient?: string;
+    cvAttached?: string;
+    details?: string[];
+  } | null>(null);
+
+  const triggerAutoApply = async (isTest: boolean) => {
+    setIsAutoApplying(true);
+    setAutoApplyFeedback(null);
+    try {
+      const url = isTest
+        ? `/api/auto-apply?test=true&recipient=${encodeURIComponent(candidate.email)}`
+        : `/api/auto-apply?limit=5`;
+
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        setAutoApplyFeedback({
+          success: true,
+          message: data.message || 'Auto-application dispatched successfully!',
+          mode: data.mode,
+          recipient: data.recipient || `${data.dispatchedCount} employers`,
+          cvAttached: data.cvAttached || (data.dispatched && data.dispatched[0]?.cvAttached) || 'CV Attached',
+          details: data.notes || (data.record ? [data.record.subject] : []),
+        });
+        // Refresh outbox history
+        const histRes = await fetch('/api/apply/history');
+        const histData = await histRes.json();
+        if (histData.success) {
+          setApplications(histData.applications || []);
+        }
+      } else {
+        setAutoApplyFeedback({
+          success: false,
+          message: data.error || 'Failed to execute auto-application cycle.',
+        });
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Network error during auto-apply';
+      setAutoApplyFeedback({
+        success: false,
+        message: errorMsg,
+      });
+    } finally {
+      setIsAutoApplying(false);
+    }
+  };
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -138,6 +191,89 @@ export default function Home() {
         
         {/* Candidate Profile Dossier Header */}
         <CandidateHeader candidate={candidate} />
+
+        {/* Autonomous Autopilot Command Center */}
+        <div className="bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border-2 border-cyan-500/30 rounded-2xl p-5 mb-8 shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 mt-1">
+                <Zap className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+                    AUTOPILOT ENGINE
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">
+                    • Cron: 07:00 UTC daily (vercel.json)
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  Autonomous Auto-Apply Dispatcher
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1">
+                  Dispatches applications on your behalf using verified direct recruiter emails, attaches your tailored CV (Quant / Systems Architect), and sends you a live BCC confirmation audit copy.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => triggerAutoApply(true)}
+                disabled={isAutoApplying}
+                className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer disabled:opacity-50"
+              >
+                <Mail className="w-4 h-4 text-cyan-400" />
+                ✉️ Send Test to My Gmail
+              </button>
+
+              <button
+                onClick={() => triggerAutoApply(false)}
+                disabled={isAutoApplying}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+              >
+                <Zap className={`w-4 h-4 ${isAutoApplying ? 'animate-spin' : ''}`} />
+                {isAutoApplying ? 'Auto-Dispatching...' : '⚡ Run Auto-Apply Cycle Now'}
+              </button>
+            </div>
+          </div>
+
+          {/* Live Feedback Toast/Banner */}
+          {autoApplyFeedback && (
+            <div className={`mt-4 p-4 rounded-xl border text-xs sm:text-sm ${
+              autoApplyFeedback.success
+                ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
+                : 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+            }`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <div className="font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    {autoApplyFeedback.message}
+                  </div>
+                  {autoApplyFeedback.recipient && (
+                    <div className="text-slate-300 text-xs">
+                      Target: <span className="font-mono text-cyan-300">{autoApplyFeedback.recipient}</span> · Attached CV: <span className="font-mono text-amber-300">{autoApplyFeedback.cvAttached}</span>
+                    </div>
+                  )}
+                  {autoApplyFeedback.details && autoApplyFeedback.details.length > 0 && (
+                    <div className="text-xs text-slate-400 mt-2 space-y-0.5">
+                      {autoApplyFeedback.details.map((d, i) => (
+                        <div key={i}>• {d}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsOutboxOpen(true)}
+                  className="text-xs underline text-cyan-400 hover:text-cyan-300 cursor-pointer font-bold whitespace-nowrap"
+                >
+                  View in Outbox →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Action & Stats Control Bar */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-8 shadow-lg">
