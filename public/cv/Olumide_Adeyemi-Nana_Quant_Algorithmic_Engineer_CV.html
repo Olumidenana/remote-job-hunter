@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olumide Adeyemi-Nana — Quantitative Systems & Algorithmic Engineer CV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @page {
+      size: A4;
+      margin: 10mm 14mm 10mm 14mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #f8fafc;
+      color: #0f172a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+    .cv-wrapper {
+      max-width: 820px;
+      margin: 24px auto;
+      background: #ffffff;
+      padding: 36px 44px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+    .no-print-bar {
+      max-width: 820px;
+      margin: 16px auto 0 auto;
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .btn-download {
+      background: #059669;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .btn-download:hover {
+      background: #047857;
+    }
+    header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    h1 {
+      font-size: 24pt;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #090d16;
+    }
+    .role-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #059669;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .headline {
+      font-size: 11pt;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 2px;
+    }
+    .contact-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      font-size: 8.5pt;
+      color: #475569;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .contact-strip a {
+      color: #059669;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .section {
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-size: 9pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #0f172a;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 3px;
+      margin-bottom: 8px;
+    }
+    p.summary {
+      font-size: 9pt;
+      color: #334155;
+      text-align: justify;
+      line-height: 1.45;
+    }
+    .skills-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      font-size: 8.5pt;
+    }
+    .skills-item strong {
+      color: #0f172a;
+    }
+    .skills-item span {
+      color: #475569;
+    }
+    .job {
+      margin-bottom: 11px;
+    }
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 2px;
+    }
+    .job-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .job-company {
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #059669;
+    }
+    .job-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8pt;
+      color: #64748b;
+    }
+    ul.job-bullets {
+      list-style-type: disc;
+      padding-left: 16px;
+      margin-top: 3px;
+    }
+    ul.job-bullets li {
+      font-size: 8.5pt;
+      color: #334155;
+      margin-bottom: 2.5px;
+      line-height: 1.4;
+    }
+    ul.job-bullets strong {
+      color: #0f172a;
+    }
+    .edu-block {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .edu-title {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .edu-school {
+      font-size: 8.5pt;
+      color: #475569;
+    }
+    .edu-desc {
+      font-size: 8.5pt;
+      color: #475569;
+      margin-top: 3px;
+    }
+    .pill-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #0f172a;
+    }
+    @media print {
+      body {
+        background: transparent !important;
+      }
+      .no-print-bar {
+        display: none !important;
+      }
+      .cv-wrapper {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      a {
+        text-decoration: none !important;
+        color: inherit !important;
+      }
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen Top Bar -->
+  <div class="no-print-bar">
+    <div>
+      <strong>Olumide Adeyemi-Nana</strong> — Quantitative Systems &amp; Algorithmic Engineer CV (Authentic &amp; Prop Firm Ready)
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn-download" onclick="window.print()">
+        🖨️ Print / Save as PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="cv-wrapper">
+    <!-- HEADER -->
+    <header>
+      <div class="header-top">
+        <h1>Olumide Adeyemi-Nana</h1>
+        <span class="role-badge">Global Remote · Quantitative &amp; Algorithmic Systems</span>
+      </div>
+      <div class="headline">Quantitative Systems Engineer · Algorithmic Trading Architect</div>
+      <div class="contact-strip">
+        <span>📍 Lagos / Osun, Nigeria</span>
+        <span>📞 <a href="tel:+2348149640122">+234 814 964 0122</a></span>
+        <span>✉️ <a href="mailto:olumideadeyeminana@gmail.com">olumideadeyeminana@gmail.com</a></span>
+        <span>🌐 <a href="https://olumidenana.github.io/olumide-portfolio/" target="_blank">olumidenana.github.io/olumide-portfolio</a></span>
+        <span>⚡ <a href="https://github.com/Olumidenana" target="_blank">github.com/Olumidenana</a></span>
+        <span>💼 <a href="https://www.linkedin.com/in/olumideadeyemi-nana" target="_blank">linkedin.com/in/olumideadeyemi-nana</a></span>
+      </div>
+    </header>
+
+    <!-- PROFESSIONAL SUMMARY -->
+    <section class="section">
+      <div class="section-title">Quantitative Executive Summary</div>
+      <p class="summary">
+        <strong>Quantitative Systems Engineer and Algorithmic Trading Architect</strong> with a Bachelor of Science in Mechanical Engineering from Obafemi Awolowo University. Specializes in low-latency trade routing, high-concurrency market streaming, and automated execution architectures. Over the past year, engineered and deployed a live zero-lookahead algorithmic engine processing <strong>73+ concurrent live WebSocket feeds</strong> under strict &lt;100ms latency SLAs. Combines deep mechanical dynamics (inertia, damping, equilibrium, stress load) with financial microstructure: liquidity sweeps, Fair Value Gaps (FVG), intermarket SMT correlation matrices, and automated equity drawdown throttles. Proficient in Python 3.12 (asyncio), low-level C FFI bindings into MetaTrader (MT4/MT5), Deriv WebSockets, and high-integrity PostgreSQL database ledgers.
+      </p>
+    </section>
+
+    <!-- TECHNICAL & QUANTITATIVE PROFICIENCIES -->
+    <section class="section">
+      <div class="section-title">Quantitative &amp; Technical Proficiencies</div>
+      <div class="skills-grid">
+        <div class="skills-item">
+          <strong>Trading &amp; Execution Protocols:</strong> <span>Deriv WebSockets, MetaTrader 4 &amp; 5 C FFI, FIX Protocol concepts, REST APIs</span>
+        </div>
+        <div class="skills-item">
+          <strong>Algorithmic Concepts:</strong> <span>Smart Money Concepts (SMC), Order Flow, Fair Value Gaps, Liquidity Sweeps, SMT Correlation</span>
+        </div>
+        <div class="skills-item">
+          <strong>Languages &amp; Runtimes:</strong> <span>Python 3.12 (asyncio, multiprocessing), C (FFI bindings), TypeScript, SQL (PostgreSQL), Bash</span>
+        </div>
+        <div class="skills-item">
+          <strong>Risk Management &amp; Hedging:</strong> <span>Dynamic trailing stops, max equity drawdown throttles, Sharpe ratio analysis, split escrow</span>
+        </div>
+        <div class="skills-item">
+          <strong>Data Engineering &amp; Streaming:</strong> <span>High-throughput WebSockets, time-series candle generation, redis pub/sub, PLpgSQL locks</span>
+        </div>
+        <div class="skills-item">
+          <strong>Systems Rigor:</strong> <span>Zero-lookahead event matrices, concurrency lock contention avoidance, sub-100ms dispatch SLAs</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORK EXPERIENCE -->
+    <section class="section">
+      <div class="section-title">Quantitative Systems &amp; Production Deployments</div>
+
+      <!-- ROLE TITLE: CHIEF ALGORITHMIC ARCHITECT -->
+      <div style="margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px dashed #e2e8f0;">
+        <div class="job-header">
+          <div>
+            <span class="job-title" style="font-size:10pt; color:#059669;">Chief Algorithmic Architect &amp; Systems Founder</span>
+          </div>
+          <span class="job-meta" style="font-weight:700; color:#0f172a;">2026 – Present · Production Quant Platforms</span>
+        </div>
+        <p style="font-size:8.5pt; color:#475569; margin-top:2px;">
+          Designed, built, and launched production algorithmic trading systems and automated risk controls:
+        </p>
+      </div>
+
+      <!-- ICT FLUX -->
+      <div class="job">
+        <div class="job-header">
+          <div>
+            <span class="job-title">ICT Flux</span> · 
+            <span class="job-company">Institutional-Grade Quant Trading Engine (<a href="https://ictflux.app" target="_blank" style="color:#059669; text-decoration:none;">ictflux.app</a>)</span>
+          </div>
+          <span class="job-meta">2026 · Live Platform</span>
+        </div>
+        <ul class="job-bullets">
+          <li>Architected and launched a distributed quantitative trading platform ingesting and analyzing <strong>73+ concurrent real-time feeds</strong> across Forex, US Equities, and Deriv Synthetic Indices simultaneously.</li>
+          <li>Engineered custom low-level <strong>C FFI bindings</strong> to bridge Python algorithmic signal generators directly into MetaTrader (MT4 &amp; MT5) native execution memory, sustaining <strong>&lt;100ms dispatch latency</strong> during high-impact market news releases (NFP, CPI, FOMC).</li>
+          <li>Constructed a zero-lookahead algorithmic matrix detecting Fair Value Gaps (FVG), Market Structure Shifts (MSS), and Order Block 50% Mean Thresholds with deterministic order book verification.</li>
+          <li>Developed an <strong>SMT Divergence Guard</strong> cross-referencing correlated pairs (EURUSD vs GBPUSD; DXY vs Risk Assets) to systematically disqualify false liquidity sweeps and avoid bull/bear traps.</li>
+          <li>Deployed an autonomous managed account execution program operating via Deriv WebSockets, enforcing automated daily equity drawdown throttles and a <strong>5%–10% monthly profit split</strong> incentive model.</li>
+        </ul>
+      </div>
+
+      <!-- CHOPOS OS (FINANCIAL INTEGRITY & ESCROW) -->
+      <div class="job">
+        <div class="job-header">
+          <div>
+            <span class="job-title">Chopos OS</span> · 
+            <span class="job-company">Automated Split-Escrow Merchant Ledger Platform</span>
+          </div>
+          <span class="job-meta">2026 · Production System</span>
+        </div>
+        <ul class="job-bullets">
+          <li>Engineered an on-demand fintech ledger platform orchestrating automated multi-party split escrow transactions using Paystack Subaccounts API with sub-50ms dispatch confirmation.</li>
+          <li>Implemented rigorous PostgreSQL transaction isolation and row-level locking (<span class="pill-tag">SELECT ... FOR UPDATE</span>) preventing race conditions, balance double-spending, and state corruption across thousands of concurrent checkout attempts.</li>
+          <li>Built event-driven WebSocket relays synchronizing merchant terminals, delivery couriers, and bank settlement webhooks with end-to-end cryptographic payload verification.</li>
+        </ul>
+      </div>
+
+      <!-- TOONFORGE & DISTRIBUTED COMPUTATION -->
+      <div class="job">
+        <div class="job-header">
+          <div>
+            <span class="job-title">ToonForge &amp; Video Assembler Infrastructure</span> · 
+            <span class="job-company">Distributed Cloud Rendering</span>
+          </div>
+          <span class="job-meta">2026 · Cloud Suite</span>
+        </div>
+        <ul class="job-bullets">
+          <li>Architected distributed cloud transcoding pipelines utilizing worker queues and parallel chunk encoding, reducing media rendering latencies by over 45%.</li>
+          <li>Integrated multi-modal AI APIs (Gemini/Claude) with structured JSON schemas and deterministic seed parameters to guarantee reproducibility across automated batch generation workflows.</li>
+        </ul>
+      </div>
+
+      <!-- MOTION OAU & QUANT MODELING -->
+      <div class="job">
+        <div class="job-header">
+          <div>
+            <span class="job-title">Motion OAU &amp; Enterprise Platforms</span> · 
+            <span class="job-company">Real-Time Spatial Clustering Algorithms</span>
+          </div>
+          <span class="job-meta">2025 – 2026</span>
+        </div>
+        <ul class="job-bullets">
+          <li>Engineered real-time spatial clustering algorithms utilizing the Haversine distance formula to dynamically batch university student commuters into optimal shuttle dispatch pools.</li>
+          <li>Consulted on high-throughput data processing systems, implementing automated database indexing, query optimization, and load-tested REST/WebSocket APIs.</li>
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- EDUCATION -->
+    <section class="section">
+      <div class="section-title">Education &amp; Quantitative Rigor</div>
+      <div class="edu-block">
+        <span class="edu-title">Bachelor of Science (B.Sc.) in Mechanical Engineering</span>
+        <span class="job-meta">Obafemi Awolowo University (OAU)</span>
+      </div>
+      <div class="edu-school">Ile-Ife, Nigeria</div>
+      <p class="edu-desc">
+        <strong>Applied Mathematical Foundations:</strong> Differential Equations, Numerical Analysis, Thermodynamics &amp; Fluid Dynamics (Turbulence and Friction Modeling), Dynamic Mechanical Systems, Finite Element Analysis (FEA), Computational Control Theory. Applies the physical laws of conservation of momentum, damping, and thermodynamic entropy to model financial market liquidity, order book imbalances, and volatility regimes.
+      </p>
+    </section>
+
+  </div>
+
+</body>
+</html>

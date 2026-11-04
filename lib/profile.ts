@@ -38,6 +38,18 @@ export const DEFAULT_CANDIDATE: CandidateProfile = {
     'ACID Row-Level Locking Database Engineering',
     'Browser-Native WebGL 3D & Cloud FFMPEG Transcoding',
   ],
+  cvFiles: {
+    fullStack: {
+      name: 'Full-Stack Systems Architect CV',
+      filename: 'Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf',
+      url: '/cv/Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf',
+    },
+    quant: {
+      name: 'Quant Algorithmic Engineer CV',
+      filename: 'Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf',
+      url: '/cv/Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf',
+    },
+  },
   keyProjects: [
     {
       name: "GOD'S EYE · Sovereign Intelligence & Automated Execution Platform (Tier 1 Flagship)",

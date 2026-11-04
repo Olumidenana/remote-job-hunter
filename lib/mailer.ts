@@ -15,10 +15,12 @@ export interface EmailDispatchResult {
 export function buildEmailHtml(jobs: RemoteJob[], stats: ScanResult['stats']): string {
   const topJobs = jobs.slice(0, 8);
   const candidate = DEFAULT_CANDIDATE;
+  const appDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://olumidenana.github.io/olumide-portfolio';
 
   const jobCardsHtml = topJobs.map((job, idx) => {
     const pkg = generateApplicationPackage(job);
     const scoreColor = job.matchScore >= 90 ? '#10b981' : job.matchScore >= 80 ? '#0284c7' : '#8b5cf6';
+    const instructions = pkg.instructions;
 
     return `
       <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
@@ -28,6 +30,7 @@ export function buildEmailHtml(jobs: RemoteJob[], stats: ScanResult['stats']): s
               ${job.matchScore}% Match
             </span>
             ${job.urgent ? '<span style="display: inline-block; background-color: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; margin-left: 6px;">Urgent Hire</span>' : ''}
+            ${instructions.hasDirectEmail ? '<span style="display: inline-block; background-color: #0284c7; color: #ffffff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; margin-left: 6px;">✉️ Direct Recruiter Email</span>' : ''}
             <h2 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 8px 0 2px 0;">
               ${idx + 1}. ${job.title}
             </h2>
@@ -43,23 +46,34 @@ export function buildEmailHtml(jobs: RemoteJob[], stats: ScanResult['stats']): s
           ${job.description}
         </p>
 
+        <!-- Compliance & Instruction Analysis -->
         <div style="background-color: #f8fafc; border-left: 3px solid #0284c7; padding: 10px 12px; margin: 12px 0; border-radius: 4px;">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #0284c7; margin-bottom: 4px;">Why It Fits You:</div>
-          <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: #334155;">
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #0284c7; margin-bottom: 4px;">
+            Targeted CV & Instruction Compliance:
+          </div>
+          <div style="font-size: 12px; color: #334155; margin-bottom: 4px;">
+            📄 <strong>Attached CV:</strong> ${pkg.recommendedCVName} (<a href="${appDomain}/cv/${pkg.recommendedCVFile}" style="color: #0284c7;">View PDF</a>)
+          </div>
+          ${instructions.recipientEmail ? `<div style="font-size: 12px; color: #1e293b;">✉️ <strong>Hiring Email:</strong> ${instructions.recipientEmail}</div>` : ''}
+          ${instructions.secretCodeWords.length > 0 ? `<div style="font-size: 12px; color: #b45309;">⚠️ <strong>Anti-bot Codeword Applied:</strong> "${instructions.secretCodeWords.join(', ')}"</div>` : ''}
+          <ul style="margin: 6px 0 0 0; padding-left: 16px; font-size: 12px; color: #475569;">
             ${job.matchReasons.map(r => `<li>${r}</li>`).join('')}
           </ul>
         </div>
 
         <div style="margin: 14px 0 10px 0;">
+          <a href="${pkg.mailtoUrl}" target="_blank" style="display: inline-block; background-color: #10b981; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 6px; margin-right: 8px;">
+            Send Compliant Email Application &rarr;
+          </a>
           <a href="${job.applyUrl}" target="_blank" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 6px; margin-right: 10px;">
-            Apply Directly &rarr;
+            Open Job Portal
           </a>
           <span style="font-size: 12px; color: #64748b;">Source: ${job.source}</span>
         </div>
 
         <details style="margin-top: 12px; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
           <summary style="font-size: 12px; font-weight: 600; color: #475569; cursor: pointer;">
-            📋 Click to View Tailored Pitch for ${job.company}
+            📋 Click to View Tailored Pitch Hook
           </summary>
           <pre style="background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 6px; font-size: 11px; white-space: pre-wrap; font-family: monospace; margin-top: 8px;">
 ${pkg.hookPitch}
@@ -89,7 +103,7 @@ ${pkg.hookPitch}
             ${topJobs.length} New Remote Roles Tailored for You
           </h1>
           <p style="font-size: 14px; color: #94a3b8; margin: 0; line-height: 1.5;">
-            Targeted for <strong style="color: #ffffff;">${candidate.name}</strong> (${candidate.headline}) based on your live GitHub portfolio and production track record.
+            Targeted for <strong style="color: #ffffff;">${candidate.name}</strong> (${candidate.headline}) based on your live GitHub portfolio and GOD'S EYE sovereign architecture.
           </p>
         </div>
 
@@ -100,12 +114,12 @@ ${pkg.hookPitch}
             <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">High Matches (&ge;85%)</div>
           </div>
           <div>
-            <div style="font-size: 18px; font-weight: 800; color: #ef4444;">${stats.urgentCount}</div>
-            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Urgent / Fresh</div>
+            <div style="font-size: 18px; font-weight: 800; color: #10b981;">${stats.directEmailCount ?? 0}</div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Direct Recruiter Emails</div>
           </div>
           <div>
-            <div style="font-size: 18px; font-weight: 800; color: #10b981;">${stats.averageScore}%</div>
-            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Avg Compatibility</div>
+            <div style="font-size: 18px; font-weight: 800; color: #ef4444;">${stats.urgentCount}</div>
+            <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600;">Urgent / Fresh</div>
           </div>
         </div>
 
@@ -113,7 +127,7 @@ ${pkg.hookPitch}
         <div style="padding: 24px;">
           <div style="margin-bottom: 20px;">
             <p style="font-size: 13.5px; color: #334155; line-height: 1.5; margin: 0;">
-              ⚡ <strong>Urgent Action Strategy:</strong> Apply to the top 3-5 roles before 12:00 PM today using the pre-tailored hook pitch. Highlight your live systems (<strong>ICT Flux</strong>, <strong>ChopOS</strong>, and <strong>ToonForge</strong>).
+              ⚡ <strong>Urgent Action Strategy:</strong> Instructions have been parsed and verified for every listing. Click <strong>"Send Compliant Email Application"</strong> or open the web dashboard to dispatch with CVs attached.
             </p>
           </div>
 
@@ -141,7 +155,6 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
   const resendApiKey = process.env.RESEND_API_KEY;
   const htmlContent = buildEmailHtml(jobs, stats);
 
-  // 1. Try Resend if configured
   if (resendApiKey) {
     try {
       const response = await fetch('https://api.resend.com/emails', {
@@ -173,8 +186,6 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
     }
   }
 
-  // 2. Default Preview / Fallback mode
-  // The email is generated and ready to be viewed in the UI or sent when API key is provided
   return {
     success: true,
     provider: 'PreviewMode',

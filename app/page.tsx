@@ -1,19 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { RemoteJob, ScanResult, CandidateProfile } from '@/types/job';
+import { RemoteJob, ScanResult, CandidateProfile, ApplicationRecord } from '@/types/job';
 import { DEFAULT_CANDIDATE } from '@/lib/profile';
 import { CandidateHeader } from '@/components/CandidateHeader';
 import { JobCard } from '@/components/JobCard';
 import { ApplyModal } from '@/components/ApplyModal';
 import { EmailDigestModal } from '@/components/EmailDigestModal';
+import { OutboxDrawer } from '@/components/OutboxDrawer';
 import {
   Search,
   RefreshCw,
   Mail,
   Briefcase,
   AlertCircle,
-  Eye,
+  Send,
+  ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function Home() {
@@ -23,27 +26,40 @@ export default function Home() {
     urgentCount: 0,
     highMatchCount: 0,
     averageScore: 0,
+    directEmailCount: 0,
   });
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python' | 'fullstack' | 'fintech'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'direct_email' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python' | 'fullstack' | 'fintech'>('all');
   const [activeApplyJob, setActiveApplyJob] = useState<RemoteJob | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isOutboxOpen, setIsOutboxOpen] = useState(false);
 
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/jobs/search');
-      const data = await res.json();
-      if (data.success) {
-        setJobs(data.matchedJobs || []);
-        setStats(data.stats || { urgentCount: 0, highMatchCount: 0, averageScore: 0 });
-        if (data.candidate) {
-          setCandidate(data.candidate);
+      const [jobsRes, historyRes] = await Promise.all([
+        fetch('/api/jobs/search'),
+        fetch('/api/apply/history'),
+      ]);
+
+      const jobsData = await jobsRes.json();
+      const historyData = await historyRes.json();
+
+      if (jobsData.success) {
+        setJobs(jobsData.matchedJobs || []);
+        setStats(jobsData.stats || { urgentCount: 0, highMatchCount: 0, averageScore: 0, directEmailCount: 0 });
+        if (jobsData.candidate) {
+          setCandidate(jobsData.candidate);
         }
       }
+
+      if (historyData.success) {
+        setApplications(historyData.applications || []);
+      }
     } catch (err) {
-      console.error('Failed to load jobs:', err);
+      console.error('Failed to load jobs or application history:', err);
     } finally {
       setIsLoading(false);
     }
@@ -52,6 +68,21 @@ export default function Home() {
   useEffect(() => {
     fetchJobs();
   }, []);
+
+  const appliedJobIds = useMemo(() => {
+    return new Set(applications.map(a => a.jobId));
+  }, [applications]);
+
+  const handleApplicationDispatched = (jobId: string) => {
+    // Refresh application history
+    fetch('/api/apply/history')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setApplications(data.applications || []);
+        }
+      });
+  };
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -66,6 +97,7 @@ export default function Home() {
       if (!matchSearch) return false;
 
       // Filter category
+      if (selectedFilter === 'direct_email') return job.instructions?.hasDirectEmail;
       if (selectedFilter === 'godseye') {
         const text = `${job.title} ${job.tags.join(' ')} ${job.synergyStack.join(' ')} ${job.description}`.toLowerCase();
         return text.includes('ai') || text.includes('machine learning') || text.includes('python') || text.includes('vision') || text.includes('quant') || text.includes('trading') || text.includes('stream') || text.includes('systems') || text.includes('fastapi');
@@ -106,20 +138,28 @@ export default function Home() {
             <div>
               <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-cyan-400" />
-                Autonomous Remote Job Engine
+                Autonomous Remote Job Engine &amp; Auto-Apply Dispatcher
               </h2>
               <p className="text-xs sm:text-sm text-slate-400">
-                Scans global remote feeds matched against your GitHub portfolio &amp; GOD'S EYE sovereign architecture.
+                Analyzes job requirements, verifies anti-bot instructions, attaches your target CV, and sends emails on your behalf.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <button
+                onClick={() => setIsOutboxOpen(true)}
+                className="inline-flex items-center gap-2 bg-emerald-950/60 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/80 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
+              >
+                <Send className="w-4 h-4 text-emerald-400" />
+                Outbox ({applications.length})
+              </button>
+
+              <button
                 onClick={() => setIsEmailModalOpen(true)}
                 className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
               >
                 <Mail className="w-4 h-4 text-cyan-400" />
-                Daily Email Digest
+                Daily Alert Setup
               </button>
 
               <button
@@ -134,10 +174,14 @@ export default function Home() {
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-800">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 border-t border-slate-800">
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-xs text-slate-400">Total Scanned Today</div>
+              <div className="text-xs text-slate-400">Scanned Today</div>
               <div className="text-xl font-bold font-mono text-white mt-0.5">{jobs.length}</div>
+            </div>
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+              <div className="text-xs text-slate-400">Direct Recruiter Emails</div>
+              <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">{stats.directEmailCount ?? 0}</div>
             </div>
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
               <div className="text-xs text-slate-400">High Match (&ge;85%)</div>
@@ -147,9 +191,9 @@ export default function Home() {
               <div className="text-xs text-slate-400">Urgent Roles (48h)</div>
               <div className="text-xl font-bold font-mono text-rose-400 mt-0.5">{stats.urgentCount}</div>
             </div>
-            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-              <div className="text-xs text-slate-400">Avg Compatibility</div>
-              <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">{stats.averageScore}%</div>
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 col-span-2 sm:col-span-1">
+              <div className="text-xs text-slate-400">Applications Sent</div>
+              <div className="text-xl font-bold font-mono text-amber-400 mt-0.5">{applications.length}</div>
             </div>
           </div>
 
@@ -169,6 +213,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'all', label: 'All Matches' },
+                { id: 'direct_email', label: '✉️ Direct Recruiter Email' },
                 { id: 'godseye', label: "👁️ GOD'S EYE / Quant" },
                 { id: 'urgent', label: 'Urgent ⚡' },
                 { id: 'top', label: 'Top Fit (90%+)' },
@@ -200,7 +245,7 @@ export default function Home() {
               Showing <span className="text-white font-bold">{filteredJobs.length}</span> positions
             </span>
             <span className="text-xs text-slate-500">
-              Sorted by Match Score & Freshness
+              Sorted by Match Score &amp; Instruction Compliance
             </span>
           </div>
 
@@ -242,6 +287,7 @@ export default function Home() {
                 <JobCard
                   key={job.id}
                   job={job}
+                  isApplied={appliedJobIds.has(job.id)}
                   onOpenApply={(selected) => setActiveApplyJob(selected)}
                 />
               ))}
@@ -265,6 +311,7 @@ export default function Home() {
       <ApplyModal
         job={activeApplyJob}
         onClose={() => setActiveApplyJob(null)}
+        onApplicationSent={handleApplicationDispatched}
       />
 
       {/* Email Digest & Cron Modal */}
@@ -274,6 +321,13 @@ export default function Home() {
         jobs={jobs}
         stats={stats}
         recipientEmail={candidate.email}
+      />
+
+      {/* Applications Outbox Drawer */}
+      <OutboxDrawer
+        isOpen={isOutboxOpen}
+        onClose={() => setIsOutboxOpen(false)}
+        applications={applications}
       />
     </main>
   );

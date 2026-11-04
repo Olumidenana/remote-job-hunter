@@ -2,9 +2,9 @@
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FOlumidenana%2Fremote-job-hunter)
 
-An autonomous remote engineering career engine built specifically for **Olumide Adeyemi-Nana** ([Portfolio](https://olumidenana.github.io/olumide-portfolio/) · [GitHub](https://github.com/Olumidenana)).
+An autonomous remote engineering career engine and outbound email apply dispatcher built specifically for **Olumide Adeyemi-Nana** ([Portfolio](https://olumidenana.github.io/olumide-portfolio/) · [GitHub](https://github.com/Olumidenana)).
 
-The platform directly indexes your production track record—headlined by your newly developed Tier-1 Flagship architecture, **GOD'S EYE**—alongside your live repositories, continuously scans global remote job boards (RemoteOK, Arbeitnow, Jobicy, Remotive), matches listings with high-affinity scoring, generates tailored 3-sentence hooks and complete ATS cover letters, and dispatches automated daily alerts to your email.
+The platform directly indexes your production track record—headlined by your **Tier-1 Flagship architecture, GOD'S EYE**—alongside your live repositories, continuously scans global remote job boards, analyzes job descriptions for anti-bot instructions and required formats, attaches your targeted CV PDF, and sends tailored applications on your behalf.
 
 ---
 
@@ -26,20 +26,45 @@ The engine automatically tailors your pitches and cover letters around your high
 
 ---
 
-## 🎯 Key Capabilities
+## 🎯 Advanced Capabilities
 
-- **GOD'S EYE Affinity Matcher**: Prioritizes roles in AI/ML, Python/FastAPI, Quantitative Systems, Distributed Streaming, Data Engineering, and Full-Stack Next.js.
-- **Multi-Source Remote Job Aggregator**: Concurrently queries Arbeitnow, Jobicy, Remotive, and RemoteOK without requiring paid API keys.
-- **Urgent & Fresh Hire Detection**: Flags positions posted in the last 24–48 hours to prioritize applications for companies hiring immediately this week.
-- **Smart Apply Assistant**:
-  - **3-Sentence Punchy Pitch**: High-impact elevator pitch highlighting GOD'S EYE and ChopOS metrics for LinkedIn InMail or application forms.
-  - **Complete ATS Cover Letter**: Tailored specifically to each company and tech stack.
-  - **1-Click Copy & Apply**: Copies the pitch directly to your clipboard and opens the company application portal in a single click.
-  - **Pre-filled Email Draft (`mailto:`)**: Ready-to-send application email with subject and body pre-populated.
-- **Automated Daily Notifications (7:00 AM UTC)**:
-  - Configured via **Vercel Cron** (`vercel.json`) hitting `/api/cron/daily-jobs`.
-  - Sends to **`olumideadeyeminana@gmail.com`**.
-  - Supports **Resend** (3,000 free emails/mo) or interactive in-app HTML digest preview.
+### 1. 🔍 Deep Instruction Reader & Anti-Bot Compliance Engine
+Job postings often include specific anti-bot traps or instructions to filter candidates. This engine parses each description to extract:
+- **Direct Hiring Emails**: Scans text and `mailto:` links for recruiter contacts (`careers@`, `jobs@`, `hiring@`).
+- **Required Subject Lines**: Formats subject lines according to company requirements (e.g. `"Application: Senior Engineer - [Your Name]"`).
+- **Secret Codewords**: Detects instructions like *"Include the word 'supernova' in the first line"* and automatically embeds the requirement.
+- **Mandatory Question Answering**: Injects explicit answers for earliest start date (immediate this week), timezone overlap (GMT+1/WAT flexible with US/EU), and salary expectations.
+
+### 2. 📎 Automatic CV Selection & Direct Attachment
+The engine selects and attaches the appropriate targeted CV based on role requirements:
+- **`Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf`**: For Quant, Python, Trading, Low-Latency, Machine Learning, and Computer Vision roles.
+- **`Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf`**: For Full-Stack, Next.js, React, Node.js, and Web Development roles.
+Both CVs are embedded in `public/cv/` and attached directly to outbound application emails.
+
+### 3. ✉️ Outbound Email Dispatcher (Sends on Your Behalf)
+- Dispatches emails directly to recruiters via Resend API (`POST /api/apply/send`).
+- Includes a BCC copy sent to **`olumideadeyeminana@gmail.com`** for a real-time audit trail of every application.
+- Includes clickable links to your live portfolio ([olumidenana.github.io/olumide-portfolio](https://olumidenana.github.io/olumide-portfolio/)) and GitHub.
+
+### 4. 📋 Applications Outbox & Tracking
+- Tracks all dispatched applications in an interactive **Outbox Drawer**.
+- Records timestamp, company, role, recipient email, attached CV, and verified instructions to prevent duplicate applications.
+
+### 5. ⏰ Automated Daily Notification Cycle
+- Automated cron in `vercel.json` (`schedule: 0 7 * * *`) scans jobs every morning at **7:00 AM UTC (8:00 AM WAT)** and delivers a digest to your inbox.
+
+---
+
+## 🛠️ Environment Variables
+
+Configure these in your **Vercel Project Settings > Environment Variables**:
+
+| Variable | Description | Default |
+|---|---|---|
+| `JOB_ALERT_EMAIL` | Destination email for daily digests & application audit copies | `olumideadeyeminana@gmail.com` |
+| `RESEND_API_KEY` | Resend API key for outbound emailing with CV attachments | *(Optional: simulated preview if unset)* |
+| `EMAIL_FROM` | Sender address verified in Resend | `onboarding@resend.dev` |
+| `CRON_SECRET` | Secret token to secure the cron endpoint | *(Optional)* |
 
 ---
 
@@ -48,11 +73,9 @@ The engine automatically tailors your pitches and cover letters around your high
 1. Click the button below:  
    [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FOlumidenana%2Fremote-job-hunter)
 2. Import the repository into your Vercel account (`Olumidenana/remote-job-hunter`).
-3. (Optional) In **Environment Variables**, add:
-   * `JOB_ALERT_EMAIL`: `olumideadeyeminana@gmail.com`
-   * `RESEND_API_KEY`: *(Get a free key at [resend.com](https://resend.com))*
+3. Add your `RESEND_API_KEY` (Free tier from [resend.com](https://resend.com) provides 3,000 emails/month).
 4. Click **Deploy**.
-5. Vercel automatically activates the cron job from `vercel.json` to trigger every day at 07:00 AM UTC!
+5. Vercel automatically activates the daily cron (`vercel.json`) to run every day at 07:00 AM UTC!
 
 ---
 
@@ -66,14 +89,14 @@ cd remote-job-hunter
 # Install dependencies
 npm install
 
-# Test the multi-source aggregation engine
+# Test instruction detection and CV targeting
 npm run test:engine
 
 # Run the development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
+Open [http://localhost:3000](http://localhost:3000) to view the dashboard and applications outbox.
 
 ---
 
