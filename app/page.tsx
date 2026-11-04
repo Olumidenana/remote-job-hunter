@@ -10,6 +10,8 @@ import { EmailDigestModal } from '@/components/EmailDigestModal';
 import { OutboxDrawer } from '@/components/OutboxDrawer';
 import { SprintWarRoom } from '@/components/SprintWarRoom';
 import { OutreachSection } from '@/components/OutreachSection';
+import { AutopilotSwitchboard } from '@/components/AutopilotSwitchboard';
+import { MasterCatalogueModal } from '@/components/MasterCatalogueModal';
 import {
   Search,
   RefreshCw,
@@ -45,6 +47,7 @@ export default function Home() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isOutboxOpen, setIsOutboxOpen] = useState(false);
   const [isWarRoomOpen, setIsWarRoomOpen] = useState(false);
+  const [isCatalogueOpen, setIsCatalogueOpen] = useState(false);
   const [isAutoApplying, setIsAutoApplying] = useState(false);
   const [autoApplyFeedback, setAutoApplyFeedback] = useState<{
     success: boolean;
@@ -194,88 +197,51 @@ export default function Home() {
         {/* Candidate Profile Dossier Header */}
         <CandidateHeader candidate={candidate} onRefreshProfile={fetchJobs} />
 
-        {/* Autonomous Autopilot Command Center */}
-        <div className="bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border-2 border-cyan-500/30 rounded-2xl p-5 mb-8 shadow-xl">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400 mt-1">
-                <Zap className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
-                    AUTOPILOT ENGINE
-                  </span>
-                  <span className="text-xs font-mono text-slate-400">
-                    • Cron: 07:00 UTC daily (vercel.json)
-                  </span>
+        {/* Autonomous Autopilot Switchboard */}
+        <AutopilotSwitchboard
+          totalJobsScanned={jobs.length}
+          totalApplied={applications.length}
+          isRunningCycle={isAutoApplying}
+          onRunCycleNow={() => triggerAutoApply(false)}
+          onOpenOutbox={() => setIsOutboxOpen(true)}
+          onOpenWarRoom={() => setIsWarRoomOpen(true)}
+        />
+
+        {/* Live Feedback Toast/Banner */}
+        {autoApplyFeedback && (
+          <div className={`mt-0 mb-6 p-4 rounded-xl border text-xs sm:text-sm ${
+            autoApplyFeedback.success
+              ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
+              : 'bg-rose-950/70 border-rose-500/50 text-rose-200'
+          }`}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1">
+                <div className="font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  {autoApplyFeedback.message}
                 </div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  Autonomous Auto-Apply Dispatcher
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1">
-                  Dispatches applications on your behalf using verified direct recruiter emails, attaches your tailored CV (Quant / Systems Architect), and sends you a live BCC confirmation audit copy.
-                </p>
+                {autoApplyFeedback.recipient && (
+                  <div className="text-slate-300 text-xs">
+                    Target: <span className="font-mono text-cyan-300">{autoApplyFeedback.recipient}</span> · Attached CV: <span className="font-mono text-amber-300">{autoApplyFeedback.cvAttached}</span>
+                  </div>
+                )}
+                {autoApplyFeedback.details && autoApplyFeedback.details.length > 0 && (
+                  <div className="text-xs text-slate-400 mt-2 space-y-0.5">
+                    {autoApplyFeedback.details.map((d, i) => (
+                      <div key={i}>• {d}</div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
               <button
-                onClick={() => triggerAutoApply(true)}
-                disabled={isAutoApplying}
-                className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer disabled:opacity-50"
+                onClick={() => setIsOutboxOpen(true)}
+                className="text-xs underline text-cyan-400 hover:text-cyan-300 cursor-pointer font-bold whitespace-nowrap"
               >
-                <Mail className="w-4 h-4 text-cyan-400" />
-                ✉️ Send Test to My Gmail
-              </button>
-
-              <button
-                onClick={() => triggerAutoApply(false)}
-                disabled={isAutoApplying}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer shadow-lg shadow-cyan-500/20 disabled:opacity-50"
-              >
-                <Zap className={`w-4 h-4 ${isAutoApplying ? 'animate-spin' : ''}`} />
-                {isAutoApplying ? 'Auto-Dispatching...' : '⚡ Run Auto-Apply Cycle Now'}
+                View in Outbox →
               </button>
             </div>
           </div>
-
-          {/* Live Feedback Toast/Banner */}
-          {autoApplyFeedback && (
-            <div className={`mt-4 p-4 rounded-xl border text-xs sm:text-sm ${
-              autoApplyFeedback.success
-                ? 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200'
-                : 'bg-rose-950/70 border-rose-500/50 text-rose-200'
-            }`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="font-bold flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    {autoApplyFeedback.message}
-                  </div>
-                  {autoApplyFeedback.recipient && (
-                    <div className="text-slate-300 text-xs">
-                      Target: <span className="font-mono text-cyan-300">{autoApplyFeedback.recipient}</span> · Attached CV: <span className="font-mono text-amber-300">{autoApplyFeedback.cvAttached}</span>
-                    </div>
-                  )}
-                  {autoApplyFeedback.details && autoApplyFeedback.details.length > 0 && (
-                    <div className="text-xs text-slate-400 mt-2 space-y-0.5">
-                      {autoApplyFeedback.details.map((d, i) => (
-                        <div key={i}>• {d}</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => setIsOutboxOpen(true)}
-                  className="text-xs underline text-cyan-400 hover:text-cyan-300 cursor-pointer font-bold whitespace-nowrap"
-                >
-                  View in Outbox →
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Dual-Engine Mode Switcher */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -341,6 +307,14 @@ export default function Home() {
               >
                 <Flame className="w-4 h-4" />
                 30-Day Sprint War Room
+              </button>
+
+              <button
+                onClick={() => setIsCatalogueOpen(true)}
+                className="inline-flex items-center gap-2 bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-800/80 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer"
+              >
+                <Briefcase className="w-4 h-4 text-cyan-400" />
+                Catalogue ({jobs.length})
               </button>
 
               <button
@@ -534,6 +508,15 @@ export default function Home() {
         isOpen={isWarRoomOpen}
         onClose={() => setIsWarRoomOpen(false)}
         sentCount={applications.length}
+      />
+
+      {/* Master Catalogue & Applied Summary Modal */}
+      <MasterCatalogueModal
+        isOpen={isCatalogueOpen}
+        onClose={() => setIsCatalogueOpen(false)}
+        jobs={jobs}
+        applications={applications}
+        onOpenJob={(selected) => setActiveApplyJob(selected)}
       />
     </main>
   );
