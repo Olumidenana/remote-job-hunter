@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OutreachTarget, generateDiagnosticPitch } from '@/lib/outreach-engine';
 import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
-import { recordApplication } from '@/lib/tracker';
+import { recordApplication, isAlreadyApplied } from '@/lib/tracker';
 import { RemoteJob, ApplicationPackage } from '@/types/job';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +15,15 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Invalid outreach target data' },
         { status: 400 }
       );
+    }
+
+    // Anti-Spam Check: Never send twice to the same company or domain
+    if (isAlreadyApplied(target.id, target.company, undefined, target.contactEmail, target.domain)) {
+      return NextResponse.json({
+        success: true,
+        mode: 'ALREADY_CONTACTED_SUPPRESSED',
+        message: `Employer "${target.company}" (${target.contactEmail}) has already received an architectural diagnostic pitch. Suppressed to prevent duplicate emails.`,
+      });
     }
 
     const pitchPkg = generateDiagnosticPitch(target);

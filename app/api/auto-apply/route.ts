@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchRemoteJobs } from '@/lib/job-engine';
 import { generateApplicationPackage } from '@/lib/pitch-generator';
 import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
-import { recordApplication, isAlreadyApplied, getApplicationHistory } from '@/lib/tracker';
+import {
+  recordApplication,
+  isAlreadyApplied,
+  getApplicationHistory,
+  normalizeCompany,
+  extractDomain,
+} from '@/lib/tracker';
 import { DEFAULT_CANDIDATE } from '@/lib/profile';
 import { ApplicationRecord, RemoteJob } from '@/types/job';
 import { getQuotaStatus } from '@/lib/quota-tracker';
@@ -17,6 +23,50 @@ export async function POST(req: NextRequest) {
   return handleAutoApply(req);
 }
 
+/**
+ * Strict Anti-Spam Selection:
+ * Ensures every single target in a batch belongs to a 100% UNIQUE company and UNIQUE domain.
+ * Never applies to the same employer twice.
+ */
+function selectDiverseUniqueCompanies(jobs: RemoteJob[], limit: number): RemoteJob[] {
+  const seenCompanies = new Set<string>();
+  const seenDomains = new Set<string>();
+  const selected: RemoteJob[] = [];
+
+  // Sort by match score descending to pick the single best job for each employer
+  const sorted = [...jobs].sort((a, b) => b.matchScore - a.matchScore);
+
+  for (const job of sorted) {
+    const cNorm = normalizeCompany(job.company);
+    const domain = extractDomain(job.instructions?.recipientEmail) || extractDomain(job.url);
+
+    // 1. Prevent selecting the same company twice in this run
+    if (cNorm && seenCompanies.has(cNorm)) {
+      continue;
+    }
+
+    // 2. Prevent selecting the same corporate domain twice in this run
+    if (domain && seenDomains.has(domain)) {
+      continue;
+    }
+
+    // 3. Prevent selecting any company/domain already in historical outbox
+    if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url)) {
+      continue;
+    }
+
+    if (cNorm) seenCompanies.add(cNorm);
+    if (domain) seenDomains.add(domain);
+    selected.push(job);
+
+    if (selected.length >= limit) {
+      break;
+    }
+  }
+
+  return selected;
+}
+
 async function handleAutoApply(req: NextRequest) {
   try {
     const isTest = req.nextUrl.searchParams.get('test') === 'true';
@@ -25,7 +75,6 @@ async function handleAutoApply(req: NextRequest) {
 
     // 1. Fetch latest real-time jobs
     const scan = await fetchRemoteJobs();
-    const candidate = DEFAULT_CANDIDATE;
 
     // 2. Filter for safe, unapplied, high-scoring matches
     const eligibleJobs: RemoteJob[] = [];
@@ -37,8 +86,8 @@ async function handleAutoApply(req: NextRequest) {
         continue;
       }
 
-      // Multi-factor Deduplication: Never apply twice to the same job, same company title, or same recipient
-      if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail)) {
+      // Check against duplicate company or domain
+      if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url)) {
         continue;
       }
 
@@ -70,8 +119,8 @@ async function handleAutoApply(req: NextRequest) {
         jobId: topJob.id,
         company: topJob.company,
         jobTitle: topJob.title,
-        recipientEmail: topJob.instructions?.recipientEmail || `jobs@${topJob.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
-        companyEmailPicked: topJob.instructions?.recipientEmail || `jobs@${topJob.company.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+        recipientEmail: topJob.instructions?.recipientEmail || `jobs@${normalizeCompany(topJob.company)}.com`,
+        companyEmailPicked: topJob.instructions?.recipientEmail || `jobs@${normalizeCompany(topJob.company)}.com`,
         actualDeliveredTo: testRecipient,
         deliveryMode: 'SANDBOX_FORWARD_READY',
         mailtoUrl: dispatch.mailtoUrl,
@@ -97,7 +146,7 @@ async function handleAutoApply(req: NextRequest) {
       });
     }
 
-    // Autonomous Mode: Check daily safety quota first
+    // 3. Autonomous Mode: Check daily safety quota first
     const quota = getQuotaStatus();
     if (quota.isHardCapped || quota.remainingJobApps <= 0) {
       return NextResponse.json({
@@ -109,9 +158,10 @@ async function handleAutoApply(req: NextRequest) {
     }
 
     const safeBatchLimit = Math.min(maxApplications, quota.remainingJobApps);
-    const targetsToApply = directEmailJobs.length > 0
-      ? directEmailJobs.slice(0, safeBatchLimit)
-      : eligibleJobs.slice(0, Math.min(2, safeBatchLimit));
+    const pool = directEmailJobs.length > 0 ? directEmailJobs : eligibleJobs;
+
+    // Filter for strictly UNIQUE companies and domains across the batch
+    const targetsToApply = selectDiverseUniqueCompanies(pool, safeBatchLimit);
 
     const dispatchedRecords: ApplicationRecord[] = [];
     const dispatchNotes: string[] = [];
@@ -119,7 +169,6 @@ async function handleAutoApply(req: NextRequest) {
     for (const job of targetsToApply) {
       try {
         const pkg = generateApplicationPackage(job);
-        // Dispatch to recipient (or fallback candidate email)
         const dispatch = await sendApplicationOnBehalf(job, pkg);
 
         const record: ApplicationRecord = {
@@ -142,7 +191,7 @@ async function handleAutoApply(req: NextRequest) {
 
         recordApplication(record);
         dispatchedRecords.push(record);
-        dispatchNotes.push(`${job.company} (${job.title}) -> ${dispatch.recipient}`);
+        dispatchNotes.push(`[UNIQUE EMPLOYER] ${job.company} (${job.title}) -> ${dispatch.recipient}`);
       } catch (applyErr) {
         console.error(`Failed auto-apply for job ${job.id}:`, applyErr);
       }
@@ -156,13 +205,15 @@ async function handleAutoApply(req: NextRequest) {
       scannedTotal: scan.totalScanned,
       eligibleMatches: eligibleJobs.length,
       directEmailMatches: directEmailJobs.length,
+      uniqueCompaniesReached: dispatchedRecords.length,
       dispatchedCount: dispatchedRecords.length,
       dispatched: dispatchedRecords,
       outboxCount: updatedOutbox.length,
       notes: dispatchNotes,
+      antiSpamPolicy: 'Strict 1-Email-Per-Employer Rule Enforced (100% Unique Companies & Domains)',
       message: dispatchedRecords.length > 0
-        ? `Successfully processed ${dispatchedRecords.length} autonomous applications with CVs attached.`
-        : 'Scan completed. No new unapplied direct-email matches found in this cycle.',
+        ? `Successfully dispatched ${dispatchedRecords.length} applications across ${dispatchedRecords.length} completely unique companies.`
+        : 'Scan completed. No new unapplied unique companies found in this cycle.',
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Autonomous apply cycle failed';
