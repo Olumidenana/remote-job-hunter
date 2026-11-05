@@ -62,28 +62,41 @@ export default function Home() {
     setIsAutoApplying(true);
     setAutoApplyFeedback(null);
     try {
-      const url = isTest
-        ? `/api/auto-apply?test=true&recipient=${encodeURIComponent(candidate.email)}`
-        : `/api/auto-apply?limit=25`;
+      const payload = {
+        test: isTest,
+        recipient: isTest ? candidate.email : undefined,
+        limit: 20,
+        outreach: true,
+        outreachLimit: 5,
+        clientHistory: applications,
+      };
 
-      const res = await fetch(url, { method: 'POST' });
+      const res = await fetch('/api/auto-apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const data = await res.json();
 
       if (data.success) {
+        const mergedApps: ApplicationRecord[] = data.applications || applications;
+        setApplications(mergedApps);
+        try {
+          localStorage.setItem('remote_job_hunter_outbox', JSON.stringify(mergedApps));
+        } catch {}
+
+        const jobCount = data.jobAppsDispatched ?? (data.dispatchedCount ?? 0);
+        const outCount = data.outreachesDispatched ?? 0;
+        const totalSent = jobCount + outCount;
+
         setAutoApplyFeedback({
           success: true,
-          message: data.message || 'Auto-application dispatched successfully!',
+          message: data.message || 'Auto-application and strategic outreach cycle dispatched successfully!',
           mode: data.mode,
-          recipient: data.recipient || `${data.dispatchedCount} employers`,
-          cvAttached: data.cvAttached || (data.dispatched && data.dispatched[0]?.cvAttached) || 'CV Attached',
+          recipient: isTest ? candidate.email : `${totalSent} unique employers (${jobCount} job apps + ${outCount} diagnostic pitches)`,
+          cvAttached: data.cvAttached || (data.dispatchedJobs && data.dispatchedJobs[0]?.cvAttached) || 'Tailored ATS CV Attached',
           details: data.notes || (data.record ? [data.record.subject] : []),
         });
-        // Refresh outbox history
-        const histRes = await fetch('/api/apply/history');
-        const histData = await histRes.json();
-        if (histData.success) {
-          setApplications(histData.applications || []);
-        }
       } else {
         setAutoApplyFeedback({
           success: false,
@@ -104,9 +117,27 @@ export default function Home() {
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
+      // 1. Read persistent outbox from localStorage
+      let cachedHistory: ApplicationRecord[] = [];
+      try {
+        const stored = localStorage.getItem('remote_job_hunter_outbox');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            cachedHistory = parsed;
+            setApplications(parsed);
+          }
+        }
+      } catch {}
+
+      // 2. Fetch fresh jobs & sync outbox with server
       const [jobsRes, historyRes] = await Promise.all([
         fetch('/api/jobs/search'),
-        fetch('/api/apply/history'),
+        fetch('/api/apply/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clientHistory: cachedHistory }),
+        }),
       ]);
 
       const jobsData = await jobsRes.json();
@@ -127,8 +158,11 @@ export default function Home() {
         }
       }
 
-      if (historyData.success) {
-        setApplications(historyData.applications || []);
+      if (historyData.success && Array.isArray(historyData.applications)) {
+        setApplications(historyData.applications);
+        try {
+          localStorage.setItem('remote_job_hunter_outbox', JSON.stringify(historyData.applications));
+        } catch {}
       }
     } catch (err) {
       console.error('Failed to load jobs or application history:', err);
@@ -150,15 +184,31 @@ export default function Home() {
     return new Set(applications.map(a => a.jobId));
   }, [applications]);
 
-  const handleApplicationDispatched = (jobId: string) => {
-    fetch('/api/apply/history')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setApplications(data.applications || []);
-        }
+  const handleApplicationDispatched = async (jobId: string) => {
+    try {
+      const res = await fetch('/api/apply/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientHistory: applications }),
       });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.applications)) {
+        setApplications(data.applications);
+        try {
+          localStorage.setItem('remote_job_hunter_outbox', JSON.stringify(data.applications));
+        } catch {}
+      }
+    } catch {}
   };
+
+  const jobAppCount = useMemo(
+    () => applications.filter(a => a.type !== 'OUTREACH').length,
+    [applications]
+  );
+  const outreachCount = useMemo(
+    () => applications.filter(a => a.type === 'OUTREACH').length,
+    [applications]
+  );
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -206,6 +256,8 @@ export default function Home() {
         <AutopilotSwitchboard
           totalJobsScanned={jobs.length}
           totalApplied={applications.length}
+          jobAppCount={jobAppCount}
+          outreachCount={outreachCount}
           isRunningCycle={isAutoApplying}
           onRunCycleNow={() => triggerAutoApply(false)}
           onOpenOutbox={() => setIsOutboxOpen(true)}
@@ -260,6 +312,11 @@ export default function Home() {
           >
             <Briefcase className="w-4 h-4" />
             <span>Autonomous Inbound Job Hunter ({jobs.length} Positions)</span>
+            {jobAppCount > 0 && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-200 border border-cyan-700 font-mono">
+                {jobAppCount} Applied
+              </span>
+            )}
           </button>
 
           <button
@@ -273,7 +330,7 @@ export default function Home() {
             <Globe2 className="w-4 h-4" />
             <span>Proactive Problem-Solver Outreach (5 Global Sectors)</span>
             <span className="px-1.5 py-0.5 rounded text-[10px] bg-red-950 text-red-300 border border-red-800 font-mono">
-              NEW
+              {outreachCount > 0 ? `${outreachCount} Pitches Sent` : 'ACTIVE'}
             </span>
           </button>
         </div>
@@ -368,8 +425,13 @@ export default function Home() {
               <div className="text-xl font-bold font-mono text-emerald-300 mt-0.5">{stats.safeCount} Safe</div>
             </div>
             <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 col-span-2 sm:col-span-1">
-              <div className="text-xs text-slate-400">Applications Sent</div>
-              <div className="text-xl font-bold font-mono text-amber-400 mt-0.5">{applications.length}</div>
+              <div className="text-xs text-slate-400">Total Dispatched</div>
+              <div className="text-xl font-bold font-mono text-amber-400 mt-0.5 flex items-baseline gap-1.5">
+                <span>{applications.length}</span>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  ({jobAppCount} apps · {outreachCount} outreach)
+                </span>
+              </div>
             </div>
           </div>
 

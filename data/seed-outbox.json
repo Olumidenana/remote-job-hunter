@@ -1,0 +1,18 @@
+[
+  {
+    "id": "seed-1",
+    "type": "JOB_APP",
+    "jobId": "seed-vexcash",
+    "company": "Vexcash AG",
+    "jobTitle": "Software Developer .NET C#",
+    "recipientEmail": "jobs@vexcashag.com",
+    "companyEmailPicked": "jobs@vexcashag.com",
+    "actualDeliveredTo": "olumideadeyeminana@gmail.com",
+    "deliveryMode": "SANDBOX_FORWARD_READY",
+    "subject": "Application: Software Developer .NET C# — Olumide Adeyemi-Nana",
+    "status": "SENT",
+    "sentAt": "2026-11-04T15:35:30.307Z",
+    "cvAttached": "Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf",
+    "complianceNotes": ["Seeded historical record"]
+  }
+]

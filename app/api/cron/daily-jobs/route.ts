@@ -4,9 +4,15 @@ import { sendDailyDigest } from '@/lib/mailer';
 import { DEFAULT_CANDIDATE } from '@/lib/profile';
 import { generateApplicationPackage } from '@/lib/pitch-generator';
 import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
-import { recordApplication, isAlreadyApplied } from '@/lib/tracker';
+import {
+  recordApplication,
+  isAlreadyApplied,
+  normalizeCompany,
+  extractDomain,
+} from '@/lib/tracker';
 import { CURATED_OUTREACH_TARGETS, generateDiagnosticPitch } from '@/lib/outreach-engine';
-import { RemoteJob, ApplicationPackage } from '@/types/job';
+import { RemoteJob, ApplicationPackage, ApplicationRecord } from '@/types/job';
+import { getQuotaStatus } from '@/lib/quota-tracker';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,56 +24,86 @@ export async function POST(req: NextRequest) {
   return handleJobAlert(req);
 }
 
+function selectDiverseUniqueCompanies(jobs: RemoteJob[], limit: number): RemoteJob[] {
+  const seenCompanies = new Set<string>();
+  const seenDomains = new Set<string>();
+  const selected: RemoteJob[] = [];
+
+  const sorted = [...jobs].sort((a, b) => b.matchScore - a.matchScore);
+
+  for (const job of sorted) {
+    const cNorm = normalizeCompany(job.company);
+    const domain = extractDomain(job.instructions?.recipientEmail) || extractDomain(job.url);
+
+    if (cNorm && seenCompanies.has(cNorm)) continue;
+    if (domain && seenDomains.has(domain)) continue;
+    if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url)) continue;
+
+    if (cNorm) seenCompanies.add(cNorm);
+    if (domain) seenDomains.add(domain);
+    selected.push(job);
+
+    if (selected.length >= limit) break;
+  }
+
+  return selected;
+}
+
 async function handleJobAlert(req: NextRequest) {
   try {
-    // Optional secret check if invoked by Vercel Cron with CRON_SECRET
-    const authHeader = req.headers.get('authorization');
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      // In development or when manual trigger, allow if no strict header
-    }
-
     const scanResult = await fetchRemoteJobs();
     const recipient = req.nextUrl.searchParams.get('email') || DEFAULT_CANDIDATE.email;
-    const batchLimit = parseInt(req.nextUrl.searchParams.get('limit') || '25', 10);
+    const batchLimit = parseInt(req.nextUrl.searchParams.get('limit') || '20', 10);
+    const quota = getQuotaStatus();
 
-    // 1. Run Autonomous Auto-Apply for all new verified direct email jobs found
-    const autoApplyTargets = scanResult.matchedJobs.filter(
+    // 1. Run Autonomous Auto-Apply for safe, unapplied direct email jobs found
+    const eligibleJobs = scanResult.matchedJobs.filter(
       j => j.instructions?.hasDirectEmail &&
            j.matchScore >= 75 &&
            j.safety?.riskLevel === 'VERIFIED_SAFE' &&
-           !isAlreadyApplied(j.id, j.company, j.title, j.instructions?.recipientEmail)
-    ).slice(0, batchLimit);
+           !isAlreadyApplied(j.id, j.company, j.title, j.instructions?.recipientEmail, j.url)
+    );
+
+    const safeBatchLimit = Math.min(batchLimit, quota.remainingJobApps);
+    const autoApplyTargets = selectDiverseUniqueCompanies(eligibleJobs, safeBatchLimit);
 
     const autoDispatched: string[] = [];
     for (const job of autoApplyTargets) {
       try {
         const pkg = generateApplicationPackage(job);
-        const res = await sendApplicationOnBehalf(job, pkg);
-        recordApplication({
+        const res = await sendApplicationOnBehalf(job, pkg, undefined, 'JOB_APP');
+        const record: ApplicationRecord = {
           id: `cron-app-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          type: 'JOB_APP',
+          messageId: res.messageId,
           jobId: job.id,
           company: job.company,
           jobTitle: job.title,
-          recipientEmail: res.recipient,
+          recipientEmail: res.targetCompanyEmail || res.recipient,
+          companyEmailPicked: res.targetCompanyEmail || res.recipient,
+          actualDeliveredTo: res.actualDeliveredTo,
+          deliveryMode: res.deliveryMode,
+          mailtoUrl: res.mailtoUrl,
           subject: res.subject,
           status: (res.mode === 'LIVE_DISPATCH' ? 'SENT' : 'QUEUED'),
           sentAt: new Date().toISOString(),
           cvAttached: res.cvAttached,
           complianceNotes: res.instructionsApplied,
-        });
+        };
+        recordApplication(record);
         autoDispatched.push(`${job.company} (${job.title})`);
       } catch (err) {
         console.error('Cron auto-apply error for job:', job.id, err);
       }
     }
 
-    // 2. Proactive Strategic Problem-Solver Outreach (Dispatches 1 high-urgency diagnostic pitch per day)
+    // 2. Proactive Strategic Problem-Solver Outreach (Dispatches 1-2 high-urgency diagnostic pitches)
     let proactiveOutreachDispatched: string | null = null;
     const pendingOutreachTarget = CURATED_OUTREACH_TARGETS.find(
-      t => !isAlreadyApplied(t.id, t.company, 'Proactive Strategic Diagnostic Audit', t.contactEmail)
+      t => !isAlreadyApplied(t.id, t.company, undefined, t.contactEmail, t.domain)
     );
 
-    if (pendingOutreachTarget) {
+    if (pendingOutreachTarget && !quota.isHardCapped && quota.remainingOutreach > 0) {
       try {
         const pitchPkg = generateDiagnosticPitch(pendingOutreachTarget);
         const pseudoJob: RemoteJob = {
@@ -124,9 +160,14 @@ async function handleJobAlert(req: NextRequest) {
           },
         };
 
-        const outRes = await sendApplicationOnBehalf(pseudoJob, appPkg);
-        recordApplication({
+        const outRes = await sendApplicationOnBehalf(pseudoJob, appPkg, undefined, 'OUTREACH');
+        const outreachRecord: ApplicationRecord = {
           id: `cron-outreach-${Date.now()}`,
+          type: 'OUTREACH',
+          sector: pendingOutreachTarget.sector,
+          urgencyHook: pendingOutreachTarget.urgencyHook,
+          flagshipUsed: pendingOutreachTarget.candidateFlagshipUsed,
+          diagnosedProblem: pendingOutreachTarget.diagnosedProblem,
           messageId: outRes.messageId,
           jobId: pendingOutreachTarget.id,
           company: pendingOutreachTarget.company,
@@ -144,7 +185,8 @@ async function handleJobAlert(req: NextRequest) {
             `Urgency Hook: ${pendingOutreachTarget.urgencyHook}`,
             `Flagship: ${pendingOutreachTarget.candidateFlagshipUsed}`,
           ],
-        });
+        };
+        recordApplication(outreachRecord);
         proactiveOutreachDispatched = `${pendingOutreachTarget.company} (${pendingOutreachTarget.contactEmail})`;
       } catch (outErr) {
         console.error('Proactive outreach cron error:', outErr);

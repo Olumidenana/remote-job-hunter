@@ -10,8 +10,9 @@ import {
   extractDomain,
 } from '@/lib/tracker';
 import { DEFAULT_CANDIDATE } from '@/lib/profile';
-import { ApplicationRecord, RemoteJob } from '@/types/job';
-import { getQuotaStatus } from '@/lib/quota-tracker';
+import { ApplicationRecord, RemoteJob, ApplicationPackage } from '@/types/job';
+import { getQuotaStatus, canDispatch } from '@/lib/quota-tracker';
+import { CURATED_OUTREACH_TARGETS, generateDiagnosticPitch, OutreachTarget } from '@/lib/outreach-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,11 @@ export async function POST(req: NextRequest) {
  * Ensures every single target in a batch belongs to a 100% UNIQUE company and UNIQUE domain.
  * Never applies to the same employer twice.
  */
-function selectDiverseUniqueCompanies(jobs: RemoteJob[], limit: number): RemoteJob[] {
+function selectDiverseUniqueCompanies(
+  jobs: RemoteJob[],
+  limit: number,
+  extraHistory?: ApplicationRecord[]
+): RemoteJob[] {
   const seenCompanies = new Set<string>();
   const seenDomains = new Set<string>();
   const selected: RemoteJob[] = [];
@@ -50,8 +55,8 @@ function selectDiverseUniqueCompanies(jobs: RemoteJob[], limit: number): RemoteJ
       continue;
     }
 
-    // 3. Prevent selecting any company/domain already in historical outbox
-    if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url)) {
+    // 3. Prevent selecting any company/domain already in historical outbox or client history
+    if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url, extraHistory)) {
       continue;
     }
 
@@ -69,9 +74,24 @@ function selectDiverseUniqueCompanies(jobs: RemoteJob[], limit: number): RemoteJ
 
 async function handleAutoApply(req: NextRequest) {
   try {
-    const isTest = req.nextUrl.searchParams.get('test') === 'true';
-    const testRecipient = req.nextUrl.searchParams.get('recipient') || DEFAULT_CANDIDATE.email;
-    const maxApplications = parseInt(req.nextUrl.searchParams.get('limit') || '25', 10);
+    let body: any = {};
+    if (req.method === 'POST') {
+      try {
+        body = await req.json();
+      } catch {
+        body = {};
+      }
+    }
+
+    const isTest = req.nextUrl.searchParams.get('test') === 'true' || body?.test === true;
+    const testRecipient = req.nextUrl.searchParams.get('recipient') || body?.recipient || DEFAULT_CANDIDATE.email;
+    const maxApplications = parseInt(req.nextUrl.searchParams.get('limit') || body?.limit || '20', 10);
+    const includeOutreach = req.nextUrl.searchParams.get('outreach') !== 'false' && body?.outreach !== false;
+    const maxOutreach = parseInt(req.nextUrl.searchParams.get('outreachLimit') || body?.outreachLimit || '5', 10);
+
+    // Sync client-side persistent history if passed
+    const clientHistory: ApplicationRecord[] = Array.isArray(body?.clientHistory) ? body.clientHistory : [];
+    const mergedHistory = getApplicationHistory(clientHistory);
 
     // 1. Fetch latest real-time jobs
     const scan = await fetchRemoteJobs();
@@ -81,17 +101,15 @@ async function handleAutoApply(req: NextRequest) {
     const directEmailJobs: RemoteJob[] = [];
 
     for (const job of scan.matchedJobs) {
-      // Must not be scam
       if (job.safety && job.safety.riskLevel === 'SUSPICIOUS_SCAM') {
         continue;
       }
 
       // Check against duplicate company or domain
-      if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url)) {
+      if (isAlreadyApplied(job.id, job.company, job.title, job.instructions?.recipientEmail, job.url, mergedHistory)) {
         continue;
       }
 
-      // Score threshold >= 75
       if (job.matchScore >= 75) {
         eligibleJobs.push(job);
         if (job.instructions?.hasDirectEmail) {
@@ -100,7 +118,7 @@ async function handleAutoApply(req: NextRequest) {
       }
     }
 
-    // If test mode is requested, apply directly to testRecipient using the #1 top match
+    // TEST MODE: Sends 1 preview application to candidate.email
     if (isTest) {
       const topJob = eligibleJobs[0] || scan.matchedJobs[0];
       if (!topJob) {
@@ -115,6 +133,7 @@ async function handleAutoApply(req: NextRequest) {
 
       const record: ApplicationRecord = {
         id: `test-app-${Date.now()}`,
+        type: 'JOB_APP',
         messageId: dispatch.messageId,
         jobId: topJob.id,
         company: topJob.company,
@@ -142,78 +161,185 @@ async function handleAutoApply(req: NextRequest) {
         cvAttached: dispatch.cvAttached,
         dispatchResult: dispatch,
         record,
+        applications: getApplicationHistory(),
         message: `Test application dispatched to ${testRecipient} with ${dispatch.cvAttached} attached! Check your inbox.`,
       });
     }
 
-    // 3. Autonomous Mode: Check daily safety quota first
+    // 3. Autonomous Execution: Runner 1 (Inbound Job Applications)
     const quota = getQuotaStatus();
-    if (quota.isHardCapped || quota.remainingJobApps <= 0) {
-      return NextResponse.json({
-        success: true,
-        mode: 'QUOTA_LIMIT_PROTECTED',
-        message: `Daily job application quota reached (${quota.jobAppCount}/${quota.jobAppBudget} sent today). Pausing batch dispatches until midnight UTC to protect your Resend account.`,
-        quota,
-      });
-    }
-
-    const safeBatchLimit = Math.min(maxApplications, quota.remainingJobApps);
-    const pool = directEmailJobs.length > 0 ? directEmailJobs : eligibleJobs;
-
-    // Filter for strictly UNIQUE companies and domains across the batch
-    const targetsToApply = selectDiverseUniqueCompanies(pool, safeBatchLimit);
-
     const dispatchedRecords: ApplicationRecord[] = [];
     const dispatchNotes: string[] = [];
 
-    for (const job of targetsToApply) {
-      try {
-        const pkg = generateApplicationPackage(job);
-        const dispatch = await sendApplicationOnBehalf(job, pkg);
+    if (!quota.isHardCapped && quota.remainingJobApps > 0) {
+      const safeJobLimit = Math.min(maxApplications, quota.remainingJobApps);
+      const pool = directEmailJobs.length > 0 ? directEmailJobs : eligibleJobs;
+      const targetsToApply = selectDiverseUniqueCompanies(pool, safeJobLimit, mergedHistory);
 
-        const record: ApplicationRecord = {
-          id: `auto-app-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          messageId: dispatch.messageId,
-          jobId: job.id,
-          company: job.company,
-          jobTitle: job.title,
-          recipientEmail: dispatch.targetCompanyEmail || dispatch.recipient,
-          companyEmailPicked: dispatch.targetCompanyEmail || dispatch.recipient,
-          actualDeliveredTo: dispatch.actualDeliveredTo,
-          deliveryMode: dispatch.deliveryMode,
-          mailtoUrl: dispatch.mailtoUrl,
-          subject: dispatch.subject,
-          status: (dispatch.mode === 'LIVE_DISPATCH' ? 'SENT' : 'QUEUED'),
-          sentAt: new Date().toISOString(),
-          cvAttached: dispatch.cvAttached,
-          complianceNotes: dispatch.instructionsApplied,
-        };
+      for (const job of targetsToApply) {
+        try {
+          const pkg = generateApplicationPackage(job);
+          const dispatch = await sendApplicationOnBehalf(job, pkg, undefined, 'JOB_APP');
 
-        recordApplication(record);
-        dispatchedRecords.push(record);
-        dispatchNotes.push(`[UNIQUE EMPLOYER] ${job.company} (${job.title}) -> ${dispatch.recipient}`);
-      } catch (applyErr) {
-        console.error(`Failed auto-apply for job ${job.id}:`, applyErr);
+          const record: ApplicationRecord = {
+            id: `auto-app-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            type: 'JOB_APP',
+            messageId: dispatch.messageId,
+            jobId: job.id,
+            company: job.company,
+            jobTitle: job.title,
+            recipientEmail: dispatch.targetCompanyEmail || dispatch.recipient,
+            companyEmailPicked: dispatch.targetCompanyEmail || dispatch.recipient,
+            actualDeliveredTo: dispatch.actualDeliveredTo,
+            deliveryMode: dispatch.deliveryMode,
+            mailtoUrl: dispatch.mailtoUrl,
+            subject: dispatch.subject,
+            status: (dispatch.mode === 'LIVE_DISPATCH' ? 'SENT' : 'QUEUED'),
+            sentAt: new Date().toISOString(),
+            cvAttached: dispatch.cvAttached,
+            complianceNotes: dispatch.instructionsApplied,
+          };
+
+          recordApplication(record);
+          dispatchedRecords.push(record);
+          dispatchNotes.push(`[JOB APP] ${job.company} (${job.title}) -> ${dispatch.recipient}`);
+        } catch (applyErr) {
+          console.error(`Failed auto-apply for job ${job.id}:`, applyErr);
+        }
+      }
+    } else {
+      dispatchNotes.push(`[JOB APP SHIELD] Daily job quota limit reached (${quota.jobAppCount}/${quota.jobAppBudget}). Job apps paused.`);
+    }
+
+    // 4. Autonomous Execution: Runner 2 (Proactive Strategic Diagnostic Outreach)
+    const dispatchedOutreaches: ApplicationRecord[] = [];
+    if (includeOutreach) {
+      const updatedQuota = getQuotaStatus();
+      if (!updatedQuota.isHardCapped && updatedQuota.remainingOutreach > 0) {
+        const safeOutreachLimit = Math.min(maxOutreach, updatedQuota.remainingOutreach);
+        
+        // Find un-contacted outreach targets
+        const pendingTargets = CURATED_OUTREACH_TARGETS.filter(t => 
+          !isAlreadyApplied(t.id, t.company, undefined, t.contactEmail, t.domain, [...mergedHistory, ...dispatchedRecords])
+        ).slice(0, safeOutreachLimit);
+
+        for (const target of pendingTargets) {
+          try {
+            const pitchPkg = generateDiagnosticPitch(target);
+            const pseudoJob: RemoteJob = {
+              id: target.id,
+              title: `Architectural Diagnostic: ${target.urgencyHook}`,
+              company: target.company,
+              location: 'Global Proactive Outreach',
+              isWorldwide: true,
+              url: `https://${target.domain}`,
+              applyUrl: `mailto:${target.contactEmail}`,
+              source: 'Direct',
+              tags: [target.sector.toLowerCase(), 'architecture', 'systems'],
+              description: target.diagnosedProblem,
+              publishedAt: new Date().toISOString(),
+              matchScore: 99,
+              matchReasons: [target.urgencyHook],
+              synergyStack: ['Systems Architecture', 'Latency Reduction'],
+            };
+
+            const appPkg: ApplicationPackage = {
+              jobId: target.id,
+              jobTitle: `Strategic Architecture Diagnostic`,
+              company: target.company,
+              recipientEmail: target.contactEmail,
+              subject: pitchPkg.subject,
+              hookPitch: pitchPkg.hookPitch,
+              fullCoverLetter: pitchPkg.fullBody,
+              mailtoUrl: pitchPkg.mailtoUrl,
+              recommendedCVFile: pitchPkg.recommendedCVFile,
+              recommendedCVName: pitchPkg.recommendedCVName,
+              instructions: {
+                recipientEmail: target.contactEmail,
+                secretCodeWords: [],
+                detectedInstructions: [`Proactive diagnostic outreach for ${target.sector}`],
+                requiredAnswers: [],
+                recommendedCV: target.recommendedCV,
+                recommendedCVFile: pitchPkg.recommendedCVFile,
+                hasDirectEmail: true,
+                complianceConfidence: 100,
+              },
+              atsAnalysis: {
+                atsScore: 99,
+                matchingKeywords: ['architecture', 'systems'],
+                missingKeywords: [],
+                recommendedHeadline: 'Sovereign Architecture & High-Performance Systems Engineer',
+                tailoredSummary: pitchPkg.hookPitch,
+              },
+              safety: {
+                safetyScore: 100,
+                riskLevel: 'VERIFIED_SAFE',
+                flags: [],
+                reasons: ['Direct Verified Organization'],
+                isVerifiedCompany: true,
+              },
+            };
+
+            const dispatchResult = await sendApplicationOnBehalf(pseudoJob, appPkg, undefined, 'OUTREACH');
+
+            const outreachRecord: ApplicationRecord = {
+              id: `outreach-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              type: 'OUTREACH',
+              sector: target.sector,
+              urgencyHook: target.urgencyHook,
+              flagshipUsed: target.candidateFlagshipUsed,
+              diagnosedProblem: target.diagnosedProblem,
+              messageId: dispatchResult.messageId,
+              jobId: target.id,
+              company: target.company,
+              jobTitle: `Diagnostic Pitch: ${target.sector}`,
+              recipientEmail: target.contactEmail,
+              companyEmailPicked: target.contactEmail,
+              actualDeliveredTo: dispatchResult.actualDeliveredTo,
+              deliveryMode: dispatchResult.deliveryMode,
+              mailtoUrl: pitchPkg.mailtoUrl,
+              subject: pitchPkg.subject,
+              status: (dispatchResult.mode === 'LIVE_DISPATCH' ? 'SENT' : 'QUEUED'),
+              sentAt: new Date().toISOString(),
+              cvAttached: dispatchResult.cvAttached,
+              complianceNotes: [
+                `Sector: ${target.sector}`,
+                `Flagship: ${target.candidateFlagshipUsed}`,
+                `Urgency: ${target.urgencyHook}`,
+              ],
+            };
+
+            recordApplication(outreachRecord);
+            dispatchedOutreaches.push(outreachRecord);
+            dispatchNotes.push(`[OUTREACH] ${target.company} (${target.sector}) -> ${dispatchResult.recipient}`);
+          } catch (outErr) {
+            console.error(`Failed outreach dispatch for target ${target.id}:`, outErr);
+          }
+        }
+      } else {
+        dispatchNotes.push(`[OUTREACH SHIELD] Daily outreach quota limit reached. Outreach paused.`);
       }
     }
 
-    const updatedOutbox = getApplicationHistory();
+    const allRecords = getApplicationHistory();
 
     return NextResponse.json({
       success: true,
-      mode: 'AUTONOMOUS_CYCLE',
+      mode: 'DUAL_AUTONOMOUS_CYCLE',
       scannedTotal: scan.totalScanned,
       eligibleMatches: eligibleJobs.length,
-      directEmailMatches: directEmailJobs.length,
-      uniqueCompaniesReached: dispatchedRecords.length,
-      dispatchedCount: dispatchedRecords.length,
-      dispatched: dispatchedRecords,
-      outboxCount: updatedOutbox.length,
+      jobAppsDispatched: dispatchedRecords.length,
+      outreachesDispatched: dispatchedOutreaches.length,
+      totalDispatchedThisSweep: dispatchedRecords.length + dispatchedOutreaches.length,
+      dispatchedJobs: dispatchedRecords,
+      dispatchedOutreaches,
+      applications: allRecords,
+      outboxCount: allRecords.length,
       notes: dispatchNotes,
-      antiSpamPolicy: 'Strict 1-Email-Per-Employer Rule Enforced (100% Unique Companies & Domains)',
-      message: dispatchedRecords.length > 0
-        ? `Successfully dispatched ${dispatchedRecords.length} applications across ${dispatchedRecords.length} completely unique companies.`
-        : 'Scan completed. No new unapplied unique companies found in this cycle.',
+      antiSpamPolicy: 'Strict 1-Email-Per-Employer Rule Enforced (100% Unique Companies & Domains Across All Engines)',
+      message: (dispatchedRecords.length + dispatchedOutreaches.length > 0)
+        ? `Cycle Complete: Dispatched ${dispatchedRecords.length} unique job applications and ${dispatchedOutreaches.length} proactive diagnostic outreaches across 100% distinct employers.`
+        : 'Cycle Complete: All scanned companies have already been contacted. Zero duplicate emails sent.',
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Autonomous apply cycle failed';

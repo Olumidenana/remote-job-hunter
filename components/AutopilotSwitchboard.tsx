@@ -20,6 +20,8 @@ import { QuotaStatus } from '@/lib/quota-tracker';
 interface AutopilotSwitchboardProps {
   totalJobsScanned: number;
   totalApplied: number;
+  jobAppCount?: number;
+  outreachCount?: number;
   onRunCycleNow: () => void;
   isRunningCycle: boolean;
   onOpenOutbox: () => void;
@@ -29,6 +31,8 @@ interface AutopilotSwitchboardProps {
 export function AutopilotSwitchboard({
   totalJobsScanned,
   totalApplied,
+  jobAppCount = 0,
+  outreachCount = 0,
   onRunCycleNow,
   isRunningCycle,
   onOpenOutbox,
@@ -71,10 +75,10 @@ export function AutopilotSwitchboard({
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              AUTONOMOUS CLOUD DAEMON ARMED
+              DUAL-RUNNER CLOUD DAEMON ARMED
             </span>
             <span className="text-xs font-mono text-slate-400">
-              • Vercel Cron: 07:00 UTC daily (Runs while offline &amp; asleep)
+              • Vercel Cron: 07:00 UTC daily + On-Demand Multi-Runner Sweeps
             </span>
           </div>
           <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2">
@@ -82,7 +86,7 @@ export function AutopilotSwitchboard({
             Autonomous Dual-Engine Autopilot Switchboard
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-0.5">
-            Structured within Resend&apos;s daily quota limits to prevent breakages. Evaluates feeds, filters scams, tailors ATS CVs, and paces email applications and outreach safely.
+            Strict 100% Unique Company Shield active. Sweeps simultaneously dispatch tailored ATS applications and proactive problem-solver diagnostic pitches without duplicate sends.
           </p>
         </div>
 
@@ -109,7 +113,7 @@ export function AutopilotSwitchboard({
             className="inline-flex items-center gap-1.5 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition cursor-pointer shadow-lg shadow-cyan-500/20 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRunningCycle ? 'animate-spin' : ''}`} />
-            {isRunningCycle ? 'Executing Cycle...' : (quota?.isHardCapped ? 'Daily Limit Reached' : '⚡ Trigger On-Demand Sweep')}
+            {isRunningCycle ? 'Executing Dual Sweep...' : (quota?.isHardCapped ? 'Daily Limit Reached' : '⚡ Trigger On-Demand Dual Sweep')}
           </button>
         </div>
       </div>
@@ -129,11 +133,11 @@ export function AutopilotSwitchboard({
 
         <div className="flex items-center gap-3.5 text-[11px]">
           <span className="text-slate-400">
-            Job Apps: <strong className="text-emerald-400">{quota?.jobAppCount ?? 0}/{quota?.jobAppBudget ?? 60}</strong>
+            Job Apps Sent: <strong className="text-emerald-400">{jobAppCount}</strong> ({quota?.jobAppCount ?? 0}/{quota?.jobAppBudget ?? 60} today)
           </span>
           <span className="text-slate-700">•</span>
           <span className="text-slate-400">
-            Outreach: <strong className="text-amber-400">{quota?.outreachCount ?? 0}/{quota?.outreachBudget ?? 30}</strong>
+            Outreaches Sent: <strong className="text-purple-400">{outreachCount}</strong> ({quota?.outreachCount ?? 0}/{quota?.outreachBudget ?? 30} today)
           </span>
           <span className="text-slate-700">•</span>
           <span className="text-slate-500">
@@ -157,8 +161,11 @@ export function AutopilotSwitchboard({
                 <Briefcase className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">
-                  Runner 1: Inbound Remote Job Hunter
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Runner 1: Inbound Remote Job Hunter</span>
+                  <span className="text-[10px] px-2 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+                    {jobAppCount} Dispatched
+                  </span>
                 </h3>
                 <span className="text-[11px] font-mono text-cyan-300">
                   Scanning 330+ live listings across 4 global networks
@@ -174,37 +181,40 @@ export function AutopilotSwitchboard({
                   : 'bg-slate-800 text-slate-400 border-slate-700'
               }`}
             >
-              {inboundAutopilotEnabled ? '● AUTOPILOT ACTIVE' : 'PAUSED'}
+              {inboundAutopilotEnabled ? '● RUNNER 1 ACTIVE' : 'PAUSED'}
             </button>
           </div>
 
           <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-            Evaluates job descriptions against GOD&apos;S EYE, ChopOS, and ICT Flux. Detects recruiter direct emails, filters scams, and auto-dispatches tailored ATS CVs with secret codewords (capped at 60/day).
+            Evaluates job listings against GOD&apos;S EYE, ChopOS, and ICT Flux. Picks only 100% unique companies, detects recruiter direct emails, and auto-dispatches tailored ATS CVs with secret codewords.
           </p>
 
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 border-t border-slate-800/80 pt-2">
             <span>Catalogue: <strong className="text-white">{totalJobsScanned} Jobs Indexed</strong></span>
-            <span className="text-emerald-400 font-bold">Auto-Applies on Every Sweep</span>
+            <span className="text-emerald-400 font-bold">1 Company = 1 Application Max</span>
           </div>
         </div>
 
         {/* Runner 2: Proactive Problem-Solver Outreach */}
         <div className={`p-4 rounded-xl border transition ${
           outreachAutopilotEnabled
-            ? 'bg-slate-950/80 border-red-500/40'
+            ? 'bg-slate-950/80 border-purple-500/40'
             : 'bg-slate-950/40 border-slate-800 opacity-60'
         }`}>
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+              <div className="p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400">
                 <Globe2 className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">
-                  Runner 2: Proactive Problem-Solver Outreach
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Runner 2: Proactive Problem-Solver Outreach</span>
+                  <span className="text-[10px] px-2 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800">
+                    {outreachCount} Dispatched
+                  </span>
                 </h3>
-                <span className="text-[11px] font-mono text-red-300">
-                  Targeting FinTech, Quant, Defense &amp; Cloud SaaS
+                <span className="text-[11px] font-mono text-purple-300">
+                  Targeting FinTech, Quant, Defense, Cloud SaaS &amp; Transit
                 </span>
               </div>
             </div>
@@ -213,21 +223,21 @@ export function AutopilotSwitchboard({
               onClick={() => setOutreachAutopilotEnabled(!outreachAutopilotEnabled)}
               className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold transition cursor-pointer border ${
                 outreachAutopilotEnabled
-                  ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
                   : 'bg-slate-800 text-slate-400 border-slate-700'
               }`}
             >
-              {outreachAutopilotEnabled ? '● OUTREACH ACTIVE' : 'PAUSED'}
+              {outreachAutopilotEnabled ? '● RUNNER 2 ACTIVE' : 'PAUSED'}
             </button>
           </div>
 
           <p className="text-xs text-slate-400 mb-3 leading-relaxed">
-            Diagnoses critical architectural vulnerabilities (double-spending, latency bleed, SAR blind spots), drafts high-urgency diagnostic pitches, and proves Olumide&apos;s production fixes (budgeted at 30/day).
+            Diagnoses critical architectural vulnerabilities (double-spending, latency bleed, SAR satellite blind spots), drafts high-urgency diagnostic pitches, and proves Olumide&apos;s production fixes.
           </p>
 
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 border-t border-slate-800/80 pt-2">
-            <span>Sectors: <strong className="text-white">5 Global Verticals</strong></span>
-            <span className="text-amber-400 font-bold">Safe Paced Dispatches</span>
+            <span>Targets: <strong className="text-white">5 Global Verticals</strong></span>
+            <span className="text-purple-400 font-bold">Included in Every Sweep</span>
           </div>
         </div>
 

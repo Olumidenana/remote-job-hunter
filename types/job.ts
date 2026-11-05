@@ -112,6 +112,11 @@ export interface ApplicationPackage {
 export interface ApplicationRecord {
   id: string;
   messageId?: string;
+  type?: 'JOB_APP' | 'OUTREACH';
+  sector?: string;
+  urgencyHook?: string;
+  flagshipUsed?: string;
+  diagnosedProblem?: string;
   jobId: string;
   company: string;
   jobTitle: string;

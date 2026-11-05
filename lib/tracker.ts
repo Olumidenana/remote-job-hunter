@@ -6,48 +6,58 @@ import { ApplicationRecord } from '@/types/job';
 const BASE_DIR = process.env.VERCEL ? '/tmp' : process.cwd();
 const DATA_DIR = path.join(BASE_DIR, 'data');
 const OUTBOX_FILE = path.join(DATA_DIR, 'outbox.json');
+const SEED_FILE = path.join(process.cwd(), 'data', 'seed-outbox.json');
 
 // In-memory fallback cache for serverless environments
 let memoryOutbox: ApplicationRecord[] = [];
+let isInitialized = false;
 
-function ensureDataDir() {
+function loadSeedHistory(): ApplicationRecord[] {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-  } catch {
-    // If filesystem is read-only, in-memory array acts as fallback
-  }
-}
-
-export function getApplicationHistory(): ApplicationRecord[] {
-  try {
-    ensureDataDir();
-    if (fs.existsSync(OUTBOX_FILE)) {
-      const data = fs.readFileSync(OUTBOX_FILE, 'utf-8');
+    if (fs.existsSync(SEED_FILE)) {
+      const data = fs.readFileSync(SEED_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch {
-    // fallback to memory
+    // Ignore if seed file doesn't exist
   }
-  return memoryOutbox;
+  return [];
 }
 
-export function recordApplication(record: ApplicationRecord): void {
-  try {
-    // Update memory cache
-    memoryOutbox = [record, ...memoryOutbox.filter(r => r.jobId !== record.jobId)].slice(0, 200);
+function ensureInitialized() {
+  if (isInitialized && memoryOutbox.length > 0) return;
 
-    ensureDataDir();
-    const existing = getApplicationHistory();
-    const updated = [record, ...existing.filter(r => r.jobId !== record.jobId)].slice(0, 200);
-    fs.writeFileSync(OUTBOX_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+
+    if (fs.existsSync(OUTBOX_FILE)) {
+      const data = fs.readFileSync(OUTBOX_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryOutbox = parsed;
+        isInitialized = true;
+        return;
+      }
+    }
+
+    // Initialize from static seed if outbox file is empty
+    const seed = loadSeedHistory();
+    if (seed.length > 0) {
+      memoryOutbox = seed;
+      fs.writeFileSync(OUTBOX_FILE, JSON.stringify(seed, null, 2), 'utf-8');
+    }
   } catch {
-    // Filesystem error handled, in-memory cache still holds state
+    const seed = loadSeedHistory();
+    if (seed.length > 0 && memoryOutbox.length === 0) {
+      memoryOutbox = seed;
+    }
   }
+  isInitialized = true;
 }
 
 export function normalizeCompany(name?: string): string {
@@ -72,6 +82,58 @@ export function extractDomain(emailOrUrl?: string): string {
   }
 }
 
+export function getApplicationHistory(clientHistory?: ApplicationRecord[]): ApplicationRecord[] {
+  ensureInitialized();
+
+  let merged = [...memoryOutbox];
+
+  if (Array.isArray(clientHistory) && clientHistory.length > 0) {
+    const seenIds = new Set(merged.map(m => m.id || m.jobId));
+    for (const item of clientHistory) {
+      const id = item.id || item.jobId;
+      if (id && !seenIds.has(id)) {
+        merged.push(item);
+        seenIds.add(id);
+      }
+    }
+    // Update memory cache with client sync
+    memoryOutbox = merged.slice(0, 300);
+    try {
+      fs.writeFileSync(OUTBOX_FILE, JSON.stringify(memoryOutbox, null, 2), 'utf-8');
+    } catch {
+      // Safe fallback
+    }
+  }
+
+  return memoryOutbox;
+}
+
+export function recordApplication(record: ApplicationRecord): void {
+  ensureInitialized();
+  try {
+    // Check if duplicate
+    const filtered = memoryOutbox.filter(r => (r.id !== record.id && r.jobId !== record.jobId));
+    memoryOutbox = [record, ...filtered].slice(0, 300);
+
+    fs.writeFileSync(OUTBOX_FILE, JSON.stringify(memoryOutbox, null, 2), 'utf-8');
+  } catch {
+    // State remains in memory
+  }
+}
+
+export function recordApplicationsBatch(records: ApplicationRecord[]): void {
+  ensureInitialized();
+  try {
+    const newJobIds = new Set(records.map(r => r.jobId));
+    const filtered = memoryOutbox.filter(r => !newJobIds.has(r.jobId));
+    memoryOutbox = [...records, ...filtered].slice(0, 300);
+
+    fs.writeFileSync(OUTBOX_FILE, JSON.stringify(memoryOutbox, null, 2), 'utf-8');
+  } catch {
+    // State remains in memory
+  }
+}
+
 /**
  * Strict Anti-Spam & Single-Contact Enforcement:
  * Ensures we NEVER send more than 1 email to the same company,
@@ -82,19 +144,23 @@ export function isAlreadyApplied(
   company?: string,
   title?: string,
   recipientEmail?: string,
-  jobUrl?: string
+  jobUrl?: string,
+  extraHistory?: ApplicationRecord[]
 ): boolean {
-  const history = getApplicationHistory();
+  const history = extraHistory && extraHistory.length > 0
+    ? [...getApplicationHistory(), ...extraHistory]
+    : getApplicationHistory();
+
   const cNorm = normalizeCompany(company);
   const emailNorm = recipientEmail?.toLowerCase().trim();
   const domain = extractDomain(recipientEmail) || extractDomain(jobUrl);
 
   return history.some((r) => {
     // 1. Direct Job ID Match
-    if (r.jobId === jobId) return true;
+    if (r.jobId === jobId || r.id === jobId) return true;
 
     // 2. Strict One-Email-Per-Company Rule:
-    // If we have already emailed this company for any role, DO NOT email them again!
+    // If we have already emailed this company for any role or outreach, DO NOT email them again!
     if (cNorm && r.company) {
       const pastCompNorm = normalizeCompany(r.company);
       if (cNorm === pastCompNorm) {
