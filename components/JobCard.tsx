@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Award,
+  Moon,
 } from 'lucide-react';
 
 interface JobCardProps {
@@ -87,6 +88,17 @@ export function JobCard({ job, isApplied, onOpenApply }: JobCardProps) {
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-blue-300 bg-blue-950/50 border border-blue-800/50 font-mono">
                 <Globe2 className="w-3 h-3 text-blue-400" />
                 Translated
+              </span>
+            )}
+
+            {/* Night Shift / US Evening Pill */}
+            {job.isNightShift && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-indigo-950/70 text-indigo-300 border border-indigo-700/60"
+                title={job.shiftReason || 'Night / US-Evening compatible'}
+              >
+                <Moon className="w-3 h-3 text-indigo-400" />
+                {job.shiftType === 'NIGHT_SHIFT' ? 'Night Shift' : job.shiftType === 'US_EVENING' ? 'US-Evening (WAT Night)' : 'Async Night'}
               </span>
             )}
 

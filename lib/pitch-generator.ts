@@ -163,9 +163,13 @@ export function generateApplicationPackage(
     ? `[Required Reference: ${instructions.secretCodeWords.join(', ')}]\n\n` 
     : '';
 
+  const nightNote = job.isNightShift
+    ? ` I am specifically structured and dedicated for night-shift & US-evening coverage (working from GMT+1/WAT, aligned with US EST/PST business hours or overnight execution), providing uninterrupted focus and high-availability operations.`
+    : '';
+
   const hookPitch = `${codewordNote}Hi ${job.company} Team,
 
-I'm Olumide, a ${persona.personaTitle} with a track record of architecting and shipping production platforms under strict real-world constraints. Most recently, I engineered ${primaryProject.name} (${primaryProject.description}), achieving ${primaryProject.metrics} using ${primaryProject.tech.slice(0, 5).join(', ')}.
+I'm Olumide, a ${persona.personaTitle} with a track record of architecting and shipping production platforms under strict real-world constraints.${nightNote} Most recently, I engineered ${primaryProject.name} (${primaryProject.description}), achieving ${primaryProject.metrics} using ${primaryProject.tech.slice(0, 5).join(', ')}.
 
 Your ${job.title} opening stands out because it directly requires the engineering rigor—${persona.fitHook}—that I specialize in. You can inspect my live production systems and code here: ${candidate.portfolioUrl} (GitHub: ${candidate.githubUrl}). Attached is my tailored ${instructions.recommendedCV === 'Quant' ? candidate.cvFiles.quant.name : candidate.cvFiles.fullStack.name}.`;
 
@@ -206,6 +210,7 @@ Why I am an immediate, high-leverage fit for ${job.company}:
 • Direct Stack Alignment: I work daily with ${techStackList}, writing clean, maintainable, and type-safe code.
 • Proven Engineering Velocity: I take complete ownership from architecture to automated unit testing, deployment, and sub-second performance tuning.
 • Autonomous Remote Execution: I operate comfortably across global time zones, communicate with concise clarity, and execute autonomously without requiring constant hand-holding.
+${job.isNightShift ? `• Dedicated Night-Shift & US-Evening Availability: I am specifically structured for night-shift and US-evening coverage (working from GMT+1/WAT, perfectly synchronized with US EST/PST business hours or overnight 3rd-shift on-call), ensuring uninterrupted focus and rapid resolution while day teams are offline.\n` : ''}
 
 Attached to this email is my updated ${cvName} (${cvFile}). You can also inspect it online directly at:
 ${appDomain}/cv/${cvFile}

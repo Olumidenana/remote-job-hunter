@@ -41,7 +41,7 @@ export default function Home() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'hn' | 'direct_email' | 'translated' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'night' | 'ransica' | 'hn' | 'direct_email' | 'translated' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python'>('all');
   const [activeApplyJob, setActiveApplyJob] = useState<RemoteJob | null>(null);
   const [activeMode, setActiveMode] = useState<'jobs' | 'outreach'>('jobs');
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -223,6 +223,8 @@ export default function Home() {
       if (!matchSearch) return false;
 
       // Filter category
+      if (selectedFilter === 'night') return !!job.isNightShift;
+      if (selectedFilter === 'ransica') return job.source === 'Ransica';
       if (selectedFilter === 'hn') return job.source === 'HackerNews';
       if (selectedFilter === 'direct_email') return job.instructions?.hasDirectEmail;
       if (selectedFilter === 'translated') return job.translation?.isTranslated;
@@ -451,6 +453,8 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-1.5">
               {[
                 { id: 'all', label: 'All Matches' },
+                { id: 'night', label: '🌙 Night / US-Hours Shift' },
+                { id: 'ransica', label: '🌍 Ransica Global' },
                 { id: 'hn', label: '🔥 HN Founder Posts' },
                 { id: 'direct_email', label: '✉️ Direct Recruiter Email' },
                 { id: 'godseye', label: "👁️ GOD'S EYE / Quant" },

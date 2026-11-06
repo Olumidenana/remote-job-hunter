@@ -31,7 +31,7 @@ export interface RemoteJob {
   isWorldwide: boolean;
   url: string;
   applyUrl: string;
-  source: 'HackerNews' | 'RemoteOK' | 'Arbeitnow' | 'Jobicy' | 'Remotive' | 'TwitterX' | 'Direct';
+  source: 'HackerNews' | 'RemoteOK' | 'Arbeitnow' | 'Jobicy' | 'Remotive' | 'TwitterX' | 'Direct' | 'Ransica';
   tags: string[];
   description: string;
   salary?: string;
@@ -40,6 +40,9 @@ export interface RemoteJob {
   matchReasons: string[];
   synergyStack: string[];
   urgent?: boolean;
+  isNightShift?: boolean;
+  shiftType?: 'NIGHT_SHIFT' | 'US_EVENING' | 'FLEXIBLE_ASYNC' | 'STANDARD_DAY';
+  shiftReason?: string;
   instructions?: InstructionAnalysis;
   safety?: SafetyAnalysis;
   translation?: TranslationData;
