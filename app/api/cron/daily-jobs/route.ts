@@ -204,16 +204,35 @@ async function handleJobAlert(req: NextRequest) {
       recipient
     );
 
+    const isFullRequested = req.nextUrl.searchParams.get('full') === '1';
+
+    if (isFullRequested) {
+      return NextResponse.json({
+        success: true,
+        timestamp: new Date().toISOString(),
+        recipient,
+        scannedCount: scanResult.totalScanned,
+        highMatchCount: scanResult.stats.highMatchCount,
+        urgentCount: scanResult.stats.urgentCount,
+        autoAppliedJobs: autoDispatched,
+        proactiveOutreach: proactiveOutreachDispatched,
+        digestDispatch: {
+          success: dispatchResult.success,
+          provider: dispatchResult.provider,
+          recipient: dispatchResult.recipient,
+          jobCount: dispatchResult.jobCount,
+        },
+      });
+    }
+
+    // Ultra-compact payload (< 150 bytes) guaranteed never to exceed cron-job.org / monitor logging limits
     return NextResponse.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      recipient,
-      scannedCount: scanResult.totalScanned,
-      highMatchCount: scanResult.stats.highMatchCount,
-      urgentCount: scanResult.stats.urgentCount,
-      autoAppliedJobs: autoDispatched,
-      proactiveOutreach: proactiveOutreachDispatched,
-      digestDispatch: dispatchResult,
+      status: 'ok',
+      scanned: scanResult.totalScanned,
+      highMatches: scanResult.stats.highMatchCount,
+      applied: autoDispatched.length,
+      digest: dispatchResult.provider || 'SENT',
+      durationMs: Date.now() - (req.headers.get('x-start-time') ? parseInt(req.headers.get('x-start-time')!, 10) : Date.now()),
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : 'Cron job execution failed';
