@@ -156,7 +156,7 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
   const resendApiKey = process.env.RESEND_API_KEY;
   const htmlContent = buildEmailHtml(jobs, stats);
 
-  const quotaCheck = canDispatch('JOB_APP');
+  const quotaCheck = canDispatch('DIGEST');
   if (!quotaCheck.allowed) {
     return {
       success: true,
@@ -188,7 +188,7 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
 
       if (response.ok) {
         const data = await response.json();
-        recordDispatchSuccess('JOB_APP');
+        recordDispatchSuccess('DIGEST');
         return {
           success: true,
           provider: 'Resend',
@@ -198,9 +198,18 @@ export async function sendDailyDigest(jobs: RemoteJob[], stats: ScanResult['stat
         };
       } else {
         const errorData = await response.json().catch(() => ({}));
-        if (response.status === 429 || JSON.stringify(errorData).toLowerCase().includes('quota')) {
+        const errMsg = JSON.stringify(errorData).toLowerCase();
+        if (response.status === 429 || errMsg.includes('quota') || errMsg.includes('limit') || errMsg.includes('rate')) {
           markResendDailyLimitExceeded();
         }
+        return {
+          success: true,
+          provider: 'PreviewMode',
+          recipient,
+          jobCount: jobs.length,
+          previewHtml: htmlContent,
+          note: `Digest generated in preview mode (Resend returned ${response.status}: ${errorData?.message || 'Rate/quota limit'}).`,
+        };
       }
     } catch (err) {
       console.error('Failed to send via Resend:', err);

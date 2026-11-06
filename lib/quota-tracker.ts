@@ -9,6 +9,7 @@ export interface QuotaStatus {
   outreachCount: number;
   outreachBudget: number;
   remainingOutreach: number;
+  digestCount: number;
   isHardCapped: boolean;
   resetsAt: string;
 }
@@ -33,11 +34,13 @@ let memoryState: {
   date: string;
   jobAppCount: number;
   outreachCount: number;
+  digestCount: number;
   isHardCapped: boolean;
 } = {
   date: getUtcTodayDate(),
   jobAppCount: 0,
   outreachCount: 0,
+  digestCount: 0,
   isHardCapped: false,
 };
 
@@ -56,7 +59,13 @@ function readPersistedState() {
       if (fs.existsSync(quotaFile)) {
         const data = JSON.parse(fs.readFileSync(quotaFile, 'utf-8'));
         if (data && data.date === today) {
-          memoryState = data;
+          memoryState = {
+            date: today,
+            jobAppCount: data.jobAppCount || 0,
+            outreachCount: data.outreachCount || 0,
+            digestCount: data.digestCount || 0,
+            isHardCapped: !!data.isHardCapped,
+          };
           return;
         }
       }
@@ -71,6 +80,7 @@ function readPersistedState() {
       date: today,
       jobAppCount: 0,
       outreachCount: 0,
+      digestCount: 0,
       isHardCapped: false,
     };
     savePersistedState();
@@ -98,7 +108,7 @@ export function getQuotaStatus(): QuotaStatus {
   const jobAppBudget = parseInt(process.env.DAILY_JOB_APP_BUDGET || `${DEFAULT_JOB_APP_BUDGET}`, 10);
   const outreachBudget = parseInt(process.env.DAILY_OUTREACH_BUDGET || `${DEFAULT_OUTREACH_BUDGET}`, 10);
 
-  const totalSent = memoryState.jobAppCount + memoryState.outreachCount;
+  const totalSent = memoryState.jobAppCount + memoryState.outreachCount + (memoryState.digestCount || 0);
   const remainingTotal = Math.max(0, dailyLimit - totalSent);
   const remainingJobApps = Math.max(0, jobAppBudget - memoryState.jobAppCount);
   const remainingOutreach = Math.max(0, outreachBudget - memoryState.outreachCount);
@@ -114,12 +124,13 @@ export function getQuotaStatus(): QuotaStatus {
     outreachCount: memoryState.outreachCount,
     outreachBudget,
     remainingOutreach: memoryState.isHardCapped ? 0 : Math.min(remainingOutreach, remainingTotal),
+    digestCount: memoryState.digestCount || 0,
     isHardCapped: memoryState.isHardCapped || remainingTotal <= 0,
     resetsAt: getNextUtcMidnight(),
   };
 }
 
-export function canDispatch(type: 'JOB_APP' | 'OUTREACH'): {
+export function canDispatch(type: 'JOB_APP' | 'OUTREACH' | 'DIGEST'): {
   allowed: boolean;
   reason?: string;
   remaining: number;
@@ -131,6 +142,13 @@ export function canDispatch(type: 'JOB_APP' | 'OUTREACH'): {
       allowed: false,
       reason: `Resend daily safety quota reached (${status.totalSent}/${status.dailyLimit} emails sent today). Resets at 00:00 UTC.`,
       remaining: 0,
+    };
+  }
+
+  if (type === 'DIGEST') {
+    return {
+      allowed: true,
+      remaining: status.remainingTotal,
     };
   }
 
@@ -157,12 +175,14 @@ export function canDispatch(type: 'JOB_APP' | 'OUTREACH'): {
   };
 }
 
-export function recordDispatchSuccess(type: 'JOB_APP' | 'OUTREACH') {
+export function recordDispatchSuccess(type: 'JOB_APP' | 'OUTREACH' | 'DIGEST') {
   readPersistedState();
   if (type === 'JOB_APP') {
     memoryState.jobAppCount += 1;
-  } else {
+  } else if (type === 'OUTREACH') {
     memoryState.outreachCount += 1;
+  } else if (type === 'DIGEST') {
+    memoryState.digestCount = (memoryState.digestCount || 0) + 1;
   }
   savePersistedState();
 }

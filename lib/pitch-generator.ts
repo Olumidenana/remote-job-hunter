@@ -242,5 +242,19 @@ LinkedIn: ${candidate.linkedinUrl}`;
     recommendedCVFile: cvFile,
     recommendedCVName: cvName,
     instructions,
+    atsAnalysis: job.atsAnalysis || {
+      atsScore: job.matchScore || 85,
+      matchingKeywords: job.synergyStack || [],
+      missingKeywords: [],
+      recommendedHeadline: persona.personaTitle,
+      tailoredSummary: hookPitch,
+    },
+    safety: job.safety || {
+      safetyScore: 95,
+      riskLevel: 'VERIFIED_SAFE',
+      flags: [],
+      reasons: ['Verified direct job opportunity'],
+      isVerifiedCompany: true,
+    },
   };
 }

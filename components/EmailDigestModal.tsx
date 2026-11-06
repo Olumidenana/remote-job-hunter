@@ -32,16 +32,16 @@ export function EmailDigestModal({ isOpen, onClose, jobs, stats, recipientEmail 
     setSendResult(null);
 
     try {
-      const res = await fetch(`/api/cron/daily-jobs?email=${encodeURIComponent(targetEmail)}`, {
+      const res = await fetch(`/api/cron/daily-jobs?digestOnly=1&full=1&email=${encodeURIComponent(targetEmail)}`, {
         method: 'POST',
       });
       const data = await res.json();
 
-      if (data.success) {
+      if (data.success || data.status === 'ok') {
         setSendResult({
           success: true,
-          provider: data.dispatch.provider,
-          message: data.dispatch.note || `Daily job alert prepared and sent to ${targetEmail}!`,
+          provider: data.digestDispatch?.provider || data.digest || 'Resend',
+          message: data.digestDispatch?.note || `Daily job alert prepared and sent to ${targetEmail}!`,
         });
       } else {
         setSendResult({
