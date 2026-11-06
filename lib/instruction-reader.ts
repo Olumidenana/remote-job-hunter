@@ -149,22 +149,21 @@ export function analyzeJobInstructions(job: Pick<RemoteJob, 'title' | 'company' 
   if (lowerText.includes('portfolio') || lowerText.includes('github') || lowerText.includes('sample code') || lowerText.includes('live project')) {
     requiredAnswers.push({
       question: 'Portfolio & Production Repositories',
-      answer: `Live Portfolio: ${DEFAULT_CANDIDATE.portfolioUrl} | GitHub: ${DEFAULT_CANDIDATE.githubUrl} (Featuring GOD'S EYE, ChopOS, and ICT Flux).`,
+      answer: `Live Portfolio: ${DEFAULT_CANDIDATE.portfolioUrl} | GitHub: ${DEFAULT_CANDIDATE.githubUrl} (Featuring 20+ shipped production platforms including ChopOS, Resend Mission Control, AutoCare AI, and God's Eye).`,
     });
     detectedInstructions.push('Included links to live production code and interactive portfolio');
   }
 
   // 5. Select the Most Relevant CV
-  const isQuantOrAI = job.tags.some(t => /quant|trading|python|fastapi|machine learning|ai|satellite|vision|stream|redis/i.test(t)) ||
-                      /quant|trading|python|fastapi|ai|data engineer|systems|machine learning/i.test(job.title);
+  const isQuantRole = /quant|algorithmic trading|hft|prop trader|metaTrader|fix protocol|quantitative analyst|arbitrage/i.test(`${job.title} ${job.tags.join(' ')}`);
 
-  const recommendedCV: 'FullStack' | 'Quant' = isQuantOrAI ? 'Quant' : 'FullStack';
-  const recommendedCVFile = isQuantOrAI
+  const recommendedCV: 'FullStack' | 'Quant' = isQuantRole ? 'Quant' : 'FullStack';
+  const recommendedCVFile = isQuantRole
     ? DEFAULT_CANDIDATE.cvFiles.quant.filename
     : DEFAULT_CANDIDATE.cvFiles.fullStack.filename;
 
   detectedInstructions.push(
-    `Selected CV: ${isQuantOrAI ? 'Quant Algorithmic Engineer CV' : 'Full-Stack Systems Architect CV'}`
+    `Selected CV: ${isQuantRole ? 'Quant Algorithmic Engineer CV' : 'Full-Stack Systems Architect CV'}`
   );
 
   let confidence = 75;
