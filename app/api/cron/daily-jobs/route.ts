@@ -7,6 +7,7 @@ import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
 import {
   recordApplication,
   isAlreadyApplied,
+  syncPersistentHistory,
   normalizeCompany,
   extractDomain,
 } from '@/lib/tracker';
@@ -51,6 +52,9 @@ function selectDiverseUniqueCompanies(jobs: RemoteJob[], limit: number): RemoteJ
 
 async function handleJobAlert(req: NextRequest) {
   try {
+    // 0. Synchronize full persistent history (Resend API + KV + Disk + Seed) before scanning or dispatching
+    await syncPersistentHistory();
+
     const scanResult = await fetchRemoteJobs();
     const recipient = req.nextUrl.searchParams.get('email') || DEFAULT_CANDIDATE.email;
     const batchLimit = parseInt(req.nextUrl.searchParams.get('limit') || '20', 10);

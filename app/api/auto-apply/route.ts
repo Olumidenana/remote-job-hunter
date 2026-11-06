@@ -6,6 +6,7 @@ import {
   recordApplication,
   isAlreadyApplied,
   getApplicationHistory,
+  syncPersistentHistory,
   normalizeCompany,
   extractDomain,
 } from '@/lib/tracker';
@@ -89,9 +90,9 @@ async function handleAutoApply(req: NextRequest) {
     const includeOutreach = req.nextUrl.searchParams.get('outreach') !== 'false' && body?.outreach !== false;
     const maxOutreach = parseInt(req.nextUrl.searchParams.get('outreachLimit') || body?.outreachLimit || '5', 10);
 
-    // Sync client-side persistent history if passed
+    // Sync client-side persistent history and query permanent Resend/KV history
     const clientHistory: ApplicationRecord[] = Array.isArray(body?.clientHistory) ? body.clientHistory : [];
-    const mergedHistory = getApplicationHistory(clientHistory);
+    const mergedHistory = await syncPersistentHistory(clientHistory);
 
     // 1. Fetch latest real-time jobs
     const scan = await fetchRemoteJobs();

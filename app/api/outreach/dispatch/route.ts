@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OutreachTarget, generateDiagnosticPitch } from '@/lib/outreach-engine';
 import { sendApplicationOnBehalf } from '@/lib/outbound-mailer';
-import { recordApplication, isAlreadyApplied } from '@/lib/tracker';
+import { recordApplication, isAlreadyApplied, syncPersistentHistory } from '@/lib/tracker';
 import { RemoteJob, ApplicationPackage } from '@/types/job';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Sync persistent history across serverless cold starts
+    await syncPersistentHistory();
 
     // Anti-Spam Check: Never send twice to the same company or domain
     if (isAlreadyApplied(target.id, target.company, undefined, target.contactEmail, target.domain)) {

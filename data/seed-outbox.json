@@ -14,5 +14,37 @@
     "sentAt": "2026-11-04T15:35:30.307Z",
     "cvAttached": "Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf",
     "complianceNotes": ["Seeded historical record"]
+  },
+  {
+    "id": "seed-2",
+    "type": "OUTREACH",
+    "jobId": "outreach-target-1",
+    "company": "FinTech & Escrow Platforms (Global / EMEA)",
+    "jobTitle": "Strategic Architecture Diagnostic: Row-Level Concurrency Locks",
+    "recipientEmail": "engineering@fintech-settlements.com",
+    "companyEmailPicked": "engineering@fintech-settlements.com",
+    "actualDeliveredTo": "olumideadeyeminana@gmail.com",
+    "deliveryMode": "SANDBOX_FORWARD_READY",
+    "subject": "Architectural Diagnostic: Your payment reconciliation is vulnerable to concurrency race conditions without row-level ACID locking",
+    "status": "SENT",
+    "sentAt": "2026-11-04T16:00:00.000Z",
+    "cvAttached": "Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf",
+    "complianceNotes": ["Curated strategic outreach initial dispatch"]
+  },
+  {
+    "id": "seed-3",
+    "type": "OUTREACH",
+    "jobId": "outreach-target-2",
+    "company": "Algorithmic Trading & Prop Desks",
+    "jobTitle": "Strategic Architecture Diagnostic: Order Routing Latency Bleed",
+    "recipientEmail": "recruiting@quant-propdesks.com",
+    "companyEmailPicked": "recruiting@quant-propdesks.com",
+    "actualDeliveredTo": "olumideadeyeminana@gmail.com",
+    "deliveryMode": "SANDBOX_FORWARD_READY",
+    "subject": "Architectural Diagnostic: Your order routing latency is bleeding alpha during market volatility",
+    "status": "SENT",
+    "sentAt": "2026-11-04T16:15:00.000Z",
+    "cvAttached": "Olumide_Adeyemi-Nana_Quant_Algorithmic_Trader_CV.pdf",
+    "complianceNotes": ["Curated strategic outreach initial dispatch"]
   }
 ]
