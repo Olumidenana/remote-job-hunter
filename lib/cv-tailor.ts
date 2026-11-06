@@ -12,7 +12,8 @@ export function analyzeATSMatch(job: {
   const candidateKeywords = [
     'typescript', 'next.js', 'react', 'python', 'fastapi', 'postgresql', 
     'websockets', 'redis', 'timescaledb', 'opencv', 'three.js', 'docker', 
-    'full stack', 'backend', 'api', 'systems', 'fintech', 'sql', 'c'
+    'full stack', 'backend', 'api', 'systems', 'fintech', 'sql', 'c',
+    'resend', 'email', 'ast', 'whatsapp', 'automotive', 'diagnostics', 'escrow'
   ];
 
   const commonTechList = [
@@ -20,7 +21,8 @@ export function analyzeATSMatch(job: {
     'django', 'flask', 'postgresql', 'postgres', 'redis', 'timescaledb', 'sql',
     'mongodb', 'graphql', 'rest', 'websockets', 'grpc', 'docker', 'kubernetes',
     'aws', 'gcp', 'cloud', 'ci/cd', 'git', 'linux', 'three.js', 'webgl', 'opencv',
-    'microservices', 'kafka', 'testing', 'tdd', 'architecture'
+    'microservices', 'kafka', 'testing', 'tdd', 'architecture', 'resend', 'email',
+    'whatsapp', 'ai', 'llm', 'ast', 'linter', 'escrow', 'paystack'
   ];
 
   const matchingKeywords: string[] = [];
@@ -28,7 +30,7 @@ export function analyzeATSMatch(job: {
 
   for (const tech of commonTechList) {
     if (text.includes(tech)) {
-      if (candidateKeywords.includes(tech) || candidate.coreStack.some(s => s.toLowerCase() === tech)) {
+      if (candidateKeywords.includes(tech) || candidate.coreStack.some(s => s.toLowerCase().includes(tech))) {
         matchingKeywords.push(tech);
       } else {
         missingKeywords.push(tech);
@@ -38,18 +40,28 @@ export function analyzeATSMatch(job: {
 
   // ATS Score calculation based on keyword overlap
   const totalRelevant = matchingKeywords.length + missingKeywords.length;
-  let atsScore = 80;
+  let atsScore = 82;
   if (totalRelevant > 0) {
-    atsScore = Math.round((matchingKeywords.length / totalRelevant) * 40) + 55;
+    atsScore = Math.round((matchingKeywords.length / totalRelevant) * 40) + 58;
   }
-  atsScore = Math.min(Math.max(atsScore, 72), 98);
+  atsScore = Math.min(Math.max(atsScore, 75), 99);
 
   const isPythonFocus = text.includes('python') || text.includes('fastapi') || text.includes('quant');
-  const recommendedHeadline = isPythonFocus
-    ? 'High-Performance Python & Distributed Systems Engineer'
-    : 'Full-Stack Systems Engineer & Next.js/TypeScript Architect';
+  const isEmailFocus = text.includes('email') || text.includes('resend') || text.includes('telemetry');
+  const isAIFocus = text.includes('ai') || text.includes('whatsapp') || text.includes('nlp');
 
-  const tailoredSummary = `High-Velocity Full-Stack Systems Engineer and Mechanical Engineering graduate from Obafemi Awolowo University (OAU), specializing in ${matchingKeywords.slice(0, 4).join(', ')}. Proven track record shipping production systems under strict latency and concurrency limits, including GOD'S EYE (satellite earth observation & MT5 automated trade routing), ChopOS (merchant POS with PostgreSQL row-level locks), and ICT Flux (73+ live WebSocket feeds). Fully prepared for immediate remote contribution.`;
+  let recommendedHeadline = 'Full-Stack Systems Engineer & Next.js/TypeScript Architect';
+  if (isPythonFocus) {
+    recommendedHeadline = 'High-Performance Python & Distributed Systems Engineer';
+  } else if (isEmailFocus) {
+    recommendedHeadline = 'Developer Infrastructure & Email Telemetry Architect';
+  } else if (isAIFocus) {
+    recommendedHeadline = 'Lead AI Systems Architect & Full-Stack Engineer';
+  }
+
+  const matchedStr = matchingKeywords.length > 0 ? matchingKeywords.slice(0, 5).join(', ') : 'distributed systems and full-stack architecture';
+
+  const tailoredSummary = `High-Velocity Lead Systems Architect with a Mechanical Engineering foundation from Obafemi Awolowo University (OAU), specializing in ${matchedStr}. Proven track record shipping 20+ production platforms under strict latency, concurrency, and reliability constraints—including GOD'S EYE (satellite earth observation & <100ms MT5 algorithmic execution), Resend Mission Control (real-time inbound MIME streaming & AST email linters), AutoCare AI (multilingual WhatsApp diagnostics), and ChopOS (merchant POS with PostgreSQL row-level locks). Prepared for immediate, high-impact remote contribution.`;
 
   return {
     atsScore,
@@ -84,22 +96,22 @@ export function generateTailoredCvHtml(job: RemoteJob, customCandidate?: typeof 
       <title>${candidate.name} — CV Tailored for ${job.company} (${job.title})</title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        @page { size: A4; margin: 12mm 14mm; }
+        @page { size: A4; margin: 10mm 14mm; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 9.5pt; line-height: 1.45; color: #0f172a; background: #f8fafc; padding: 24px; }
-        .cv-card { max-width: 820px; margin: 0 auto; background: #ffffff; padding: 36px 44px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .no-print { max-width: 820px; margin: 0 auto 16px auto; background: #0f172a; color: white; padding: 12px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 9.2pt; line-height: 1.42; color: #0f172a; background: #f8fafc; padding: 20px; }
+        .cv-card { max-width: 820px; margin: 0 auto; background: #ffffff; padding: 32px 40px; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .no-print { max-width: 820px; margin: 0 auto 14px auto; background: #0f172a; color: white; padding: 12px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
         .btn-print { background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 12px; }
         h1 { font-size: 22pt; font-weight: 800; color: #090d16; }
-        .headline { font-size: 11pt; font-weight: 700; color: #0284c7; margin-top: 2px; }
-        .contacts { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 8.5pt; color: #475569; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; }
+        .headline { font-size: 10.5pt; font-weight: 700; color: #0284c7; margin-top: 2px; }
+        .contacts { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 8pt; color: #475569; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; }
         .contacts a { color: #0284c7; text-decoration: none; }
-        .section-title { font-size: 9pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1.5px solid #0f172a; padding-bottom: 3px; margin: 14px 0 8px 0; }
-        .job-item { margin-bottom: 10px; }
-        .job-header { display: flex; justify-content: space-between; font-weight: 700; font-size: 9.5pt; }
-        ul { padding-left: 18px; margin-top: 3px; }
-        li { font-size: 8.5pt; color: #334155; margin-bottom: 2px; }
-        .badge { background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 8pt; }
+        .section-title { font-size: 8.5pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1.5px solid #0f172a; padding-bottom: 2px; margin: 12px 0 6px 0; }
+        .job-item { margin-bottom: 9px; }
+        .job-header { display: flex; justify-content: space-between; font-weight: 700; font-size: 9pt; }
+        ul { padding-left: 16px; margin-top: 2px; }
+        li { font-size: 8pt; color: #334155; margin-bottom: 2px; line-height: 1.38; }
+        .badge { background: #e0f2fe; color: #0369a1; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 7.5pt; }
         @media print {
           .no-print { display: none; }
           body { background: white; padding: 0; }
@@ -122,54 +134,54 @@ export function generateTailoredCvHtml(job: RemoteJob, customCandidate?: typeof 
           <div class="contacts">
             <span>📍 ${candidate.location}</span>
             <span>✉️ <a href="mailto:${candidate.email}">${candidate.email}</a></span>
-            <span>📞 ${candidate.phone}</span>
-            <span>🌐 <a href="${candidate.portfolioUrl}">Live Portfolio</a></span>
-            <span>⚡ <a href="${candidate.githubUrl}">GitHub: @Olumidenana</a></span>
+            <span>📞 <a href="tel:${candidate.phone}">${candidate.phone}</a></span>
+            <span>🌐 <a href="${candidate.portfolioUrl}">Portfolio (20+ Systems)</a></span>
+            <span>⚡ <a href="${candidate.githubUrl}">GitHub</a></span>
+            <span>💼 <a href="${candidate.linkedinUrl}">LinkedIn</a></span>
           </div>
         </header>
 
         <section>
-          <div class="section-title">Targeted Professional Summary</div>
-          <p style="font-size: 9pt; color: #334155; text-align: justify; line-height: 1.45;">
-            ${ats.tailoredSummary}
-          </p>
+          <div class="section-title">Professional Summary</div>
+          <p style="font-size: 8.5pt; color: #334155; text-align: justify; line-height: 1.4;">${ats.tailoredSummary}</p>
         </section>
 
         <section>
           <div class="section-title">Core Technical Proficiencies</div>
-          <p style="font-size: 8.5pt; color: #334155; line-height: 1.6;">
-            <strong>Target Stack:</strong> ${ats.matchingKeywords.map(k => `<span class="badge">${k}</span>`).join(' ')}<br />
-            <strong>Languages & Runtimes:</strong> TypeScript, Python 3.12, JavaScript (ESNext), SQL, C (FFI), HTML5/CSS3<br />
-            <strong>Architectures & Frameworks:</strong> Next.js, React, FastAPI, Node.js, TimescaleDB, PostgreSQL, Redis Streams, WebSockets<br />
-            <strong>Systems & Cloud:</strong> Docker, Git/GitHub Actions, Vercel, Supabase, FIX Protocol 4.4, OpenCV, Three.js
+          <p style="font-size: 8pt; color: #475569; line-height: 1.45;">
+            <strong>Languages & Runtimes:</strong> Python 3.12 (asyncio, uv), TypeScript, JavaScript (ESNext), SQL, C (FFI), Bash<br/>
+            <strong>Distributed & Cloud:</strong> Next.js 15, FastAPI, Node.js, WebSockets, TimescaleDB, Redis Streams, Docker, Vercel Edge<br/>
+            <strong>Developer Infrastructure:</strong> Resend Inbound Webhooks, React Email AST Linters, RFC 5322 MIME Parsers, DNS Reputation Sentry<br/>
+            <strong>FinTech & Concurrency:</strong> Paystack Split Subaccounts, Row-Level Locking (SELECT FOR UPDATE), MetaTrader MT5 C Bridges<br/>
+            <strong>Computer Vision & AI:</strong> OpenCV (Hough Circle SAR Analysis), WhatsApp Cloud API, Multilingual Decision Trees, Three.js WebGL
           </p>
         </section>
 
         <section>
-          <div class="section-title">Production Systems & Shipped Track Record (GitHub Auto-Synced)</div>
-          ${sortedProjects.slice(0, 5).map(p => `
+          <div class="section-title">Targeted Systems & Production Track Record</div>
+          ${sortedProjects.slice(0, 5).map(proj => `
             <div class="job-item">
               <div class="job-header">
-                <span>${p.name}</span>
-                <span style="font-size: 8pt; color: #64748b; font-family: monospace;">2025–2026</span>
+                <span>${proj.name}</span>
+                <span class="badge">${proj.tech.slice(0, 3).join(', ')}</span>
               </div>
-              <div style="font-size: 8pt; color: #0284c7; margin-bottom: 2px;">${p.tech.join(' · ')}</div>
+              <p style="font-size: 8pt; color: #475569; margin: 1px 0;">${proj.description}</p>
               <ul>
-                <li>${p.description}</li>
-                <li><strong>Verified Benchmark / Metric:</strong> ${p.metrics}.</li>
+                <li><strong>Core Metrics:</strong> ${proj.metrics}</li>
+                <li><strong>Architecture & Stack:</strong> ${proj.tech.join(' · ')}</li>
               </ul>
             </div>
           `).join('')}
         </section>
 
         <section>
-          <div class="section-title">Education & Physical Systems Foundation</div>
+          <div class="section-title">Education & Mechanical Rigor</div>
           <div class="job-header">
-            <span>B.Sc. Mechanical Engineering · Obafemi Awolowo University (OAU)</span>
-            <span style="font-size: 8pt; color: #64748b;">Ile-Ife, Nigeria</span>
+            <span>Bachelor of Science (B.Sc.) in Mechanical Engineering</span>
+            <span style="font-weight: 500; font-size: 8pt; color: #64748b;">Obafemi Awolowo University (OAU)</span>
           </div>
-          <p style="font-size: 8.5pt; color: #475569; margin-top: 2px;">
-            Rigorous training in dynamic equilibrium, friction reduction, heat transfer, numerical methods, and feedback loops—applied directly to distributed systems fault-tolerance and low-latency pipelines.
+          <p style="font-size: 8pt; color: #64748b; margin-top: 2px;">
+            Applies physical machine analysis—stress limits, equilibrium states, fluid flow, and feedback loops—directly to modern distributed software engineering.
           </p>
         </section>
       </div>
