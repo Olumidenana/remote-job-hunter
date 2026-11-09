@@ -113,7 +113,9 @@ ${pkg.fullCoverLetter}
   if (gmailAppPassword && recipient) {
     try {
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
           user: gmailUser,
           pass: gmailAppPassword.replace(/\s+/g, ''),

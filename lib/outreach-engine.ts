@@ -168,10 +168,12 @@ export const CURATED_OUTREACH_TARGETS: OutreachTarget[] = [
 export function generateDiagnosticPitch(target: OutreachTarget): DiagnosticPitchPackage {
   const candidate = DEFAULT_CANDIDATE;
   const isQuant = target.recommendedCV === 'Quant';
-  const cvFile = isQuant ? candidate.cvFiles.quant.filename : candidate.cvFiles.fullStack.filename;
-  const cvName = isQuant ? candidate.cvFiles.quant.name : candidate.cvFiles.fullStack.name;
+  let cvFile = isQuant ? candidate.cvFiles.quant.filename : candidate.cvFiles.fullStack.filename;
+  let cvName = isQuant ? candidate.cvFiles.quant.name : candidate.cvFiles.fullStack.name;
 
   if (target.language === 'de') {
+    cvFile = 'Olumide_Adeyemi-Nana_Systems_Architect_Lebenslauf_DE.pdf';
+    cvName = 'German Systems Architect Lebenslauf (PDF)';
     const subject = `Architektur-Diagnose für ${target.company}: ${target.urgencyHook}`;
     const fullBody = `Sehr geehrtes Engineering-Team bei ${target.company},
 

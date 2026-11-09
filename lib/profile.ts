@@ -54,6 +54,11 @@ export const DEFAULT_CANDIDATE: CandidateProfile = {
       filename: 'Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf',
       url: '/cv/Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf',
     },
+    german: {
+      name: 'German Systems Architect Lebenslauf (PDF)',
+      filename: 'Olumide_Adeyemi-Nana_Systems_Architect_Lebenslauf_DE.pdf',
+      url: '/cv/Olumide_Adeyemi-Nana_Systems_Architect_Lebenslauf_DE.pdf',
+    },
   },
   keyProjects: [
     {

@@ -159,12 +159,15 @@ export function generateApplicationPackage(
     /kuwait|uae|united arab emirates|dubai|abu dhabi|saudi|riyadh|jeddah|qatar|doha|bahrain|manama|oman|muscat|gulf|middle east|mena/i.test(job.location) ||
     /kuwait|dubai|riyadh|gulf/i.test(job.title.toLowerCase());
 
-  // Strict PDF CV filename resolution
+  // Strict PDF CV filename resolution (Language & Market Targeted)
   let cvFile = instructions.recommendedCVFile || (instructions.recommendedCV === 'Quant' ? candidate.cvFiles.quant.filename : candidate.cvFiles.fullStack.filename);
-  if (cvFile.endsWith('.html')) {
+  let cvName = instructions.recommendedCV === 'Quant' ? candidate.cvFiles.quant.name : candidate.cvFiles.fullStack.name;
+  if (isGerman) {
+    cvFile = 'Olumide_Adeyemi-Nana_Systems_Architect_Lebenslauf_DE.pdf';
+    cvName = 'German Systems Architect Lebenslauf (PDF)';
+  } else if (cvFile.endsWith('.html')) {
     cvFile = cvFile.replace(/\.html$/i, '.pdf');
   }
-  const cvName = instructions.recommendedCV === 'Quant' ? candidate.cvFiles.quant.name : candidate.cvFiles.fullStack.name;
   const appDomain = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://olumidenana.github.io/olumide-portfolio';
 
   // 3. Custom subject line formatting

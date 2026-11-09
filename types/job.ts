@@ -85,6 +85,11 @@ export interface CandidateProfile {
       filename: string;
       url: string;
     };
+    german?: {
+      name: string;
+      filename: string;
+      url: string;
+    };
   };
   keyProjects: {
     name: string;
