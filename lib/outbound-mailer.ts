@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import nodemailer from 'nodemailer';
 import { ApplicationPackage, RemoteJob } from '@/types/job';
 import { DEFAULT_CANDIDATE } from './profile';
 import {
@@ -105,7 +106,57 @@ ${pkg.fullCoverLetter}
     };
   }
 
-  // 4. Dispatch via Resend API
+  // 4. Priority Option: Direct Gmail SMTP (100% Free, No Custom Domain Needed)
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
+  const gmailUser = process.env.GMAIL_USER || candidate.email;
+
+  if (gmailAppPassword && recipient) {
+    try {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailAppPassword.replace(/\s+/g, ''),
+        },
+      });
+
+      const attachments = cvFilePath && fs.existsSync(cvFilePath)
+        ? [{ filename: cvFilename, path: cvFilePath }]
+        : (cvBase64 ? [{ filename: cvFilename, content: Buffer.from(cvBase64, 'base64') }] : []);
+
+      const mailOptions = {
+        from: `"${candidate.name}" <${gmailUser}>`,
+        to: recipient,
+        bcc: candidate.email,
+        subject: pkg.subject,
+        html: formattedHtml,
+        attachments,
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      recordDispatchSuccess(dispatchType);
+
+      return {
+        success: true,
+        messageId: info.messageId,
+        recipient,
+        targetCompanyEmail: recipient,
+        actualDeliveredTo: recipient,
+        deliveryMode: 'LIVE_COMPANY_INBOX',
+        mailtoUrl: pkg.mailtoUrl,
+        subject: pkg.subject,
+        cvAttached: cvFilename,
+        bccConfirmation: candidate.email,
+        mode: 'LIVE_DISPATCH',
+        instructionsApplied: pkg.instructions.detectedInstructions,
+        note: `[GMAIL DIRECT DISPATCH] Delivered directly to recruiter inbox (${recipient}) via your verified Gmail address with official PDF CV attached. BCC sent to ${candidate.email}.`,
+      };
+    } catch (err: unknown) {
+      console.error('[GMAIL SMTP ERROR - Falling back to Resend/Sandbox]', err);
+    }
+  }
+
+  // 5. Dispatch via Resend API (Requires custom domain for external delivery)
   if (resendApiKey) {
     try {
       // Pacing delay (650ms) to respect Resend's 2 req/s limit
