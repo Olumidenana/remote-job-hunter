@@ -25,6 +25,11 @@ import {
   Award,
   Zap,
   CheckCircle2,
+  EyeOff,
+  Eye,
+  CheckCheck,
+  Clock,
+  Radio,
 } from 'lucide-react';
 
 export default function Home() {
@@ -41,7 +46,8 @@ export default function Home() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'night' | 'ransica' | 'hn' | 'direct_email' | 'translated' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'night' | 'ransica' | 'hn' | 'direct_email' | 'german' | 'gulf' | 'translated' | 'godseye' | 'urgent' | 'top' | 'nextjs' | 'python'>('all');
+  const [hideApplied, setHideApplied] = useState(false);
   const [activeApplyJob, setActiveApplyJob] = useState<RemoteJob | null>(null);
   const [activeMode, setActiveMode] = useState<'jobs' | 'outreach'>('jobs');
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -212,6 +218,11 @@ export default function Home() {
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
+      // Hide applied filter toggle
+      if (hideApplied && appliedJobIds.has(job.id)) {
+        return false;
+      }
+
       // Search text query
       const matchSearch =
         !searchQuery ||
@@ -227,6 +238,18 @@ export default function Home() {
       if (selectedFilter === 'ransica') return job.source === 'Ransica';
       if (selectedFilter === 'hn') return job.source === 'HackerNews';
       if (selectedFilter === 'direct_email') return job.instructions?.hasDirectEmail;
+      if (selectedFilter === 'german') {
+        return (
+          job.translation?.detectedLanguage === 'German (Deutsch)' ||
+          /germany|deutschland|berlin|munich|münchen|frankfurt|hamburg|cologne|köln|dach|austria|switzerland/i.test(job.location)
+        );
+      }
+      if (selectedFilter === 'gulf') {
+        return (
+          /kuwait|uae|united arab emirates|dubai|abu dhabi|saudi|riyadh|jeddah|qatar|doha|bahrain|manama|oman|muscat|gulf/i.test(job.location) ||
+          /kuwait|dubai/i.test(job.title.toLowerCase())
+        );
+      }
       if (selectedFilter === 'translated') return job.translation?.isTranslated;
       if (selectedFilter === 'godseye') {
         const text = `${job.title} ${job.tags.join(' ')} ${job.synergyStack.join(' ')} ${job.description}`.toLowerCase();
@@ -245,7 +268,7 @@ export default function Home() {
 
       return true;
     });
-  }, [jobs, searchQuery, selectedFilter]);
+  }, [jobs, searchQuery, selectedFilter, hideApplied, appliedJobIds]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 font-sans selection:bg-cyan-500 selection:text-slate-950">
@@ -455,6 +478,8 @@ export default function Home() {
                 { id: 'all', label: 'All Matches' },
                 { id: 'night', label: '🌙 Night / US-Hours Shift' },
                 { id: 'ransica', label: '🌍 Ransica Global' },
+                { id: 'german', label: '🇩🇪 German / DACH Market' },
+                { id: 'gulf', label: '🇰🇼 Kuwait & Gulf Remote' },
                 { id: 'hn', label: '🔥 HN Founder Posts' },
                 { id: 'direct_email', label: '✉️ Direct Recruiter Email' },
                 { id: 'godseye', label: "👁️ GOD'S EYE / Quant" },
@@ -480,11 +505,75 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Master Tracking HUD & Feed Controls */}
+        <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 mb-6 shadow-md">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="flex items-center gap-1.5 text-xs font-bold font-mono text-cyan-400 uppercase tracking-wider">
+                <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                Live Application Tracking HUD:
+              </span>
+              <span className="text-xs text-slate-300">
+                Total Dispatched: <strong className="text-white font-mono">{applications.length}</strong> ({jobAppCount} Job Apps + {outreachCount} Diagnostic Outreaches)
+              </span>
+              {applications.length > 0 && (
+                <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-500" />
+                  Latest: <span className="text-cyan-300 font-bold">{applications[0].company}</span> ({new Date(applications[0].sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Toggle to Hide Applied Jobs */}
+              <button
+                onClick={() => setHideApplied(!hideApplied)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer border ${
+                  hideApplied
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                    : 'bg-slate-800 text-slate-400 hover:text-white border-slate-700'
+                }`}
+                title="Toggle visibility of jobs already applied to"
+              >
+                {hideApplied ? (
+                  <>
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Hiding Applied Jobs ({appliedJobIds.size} Hidden)</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Hide Already Applied ({appliedJobIds.size})</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setIsOutboxOpen(true)}
+                className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5 text-emerald-400" />
+                <span>View Full Outbox</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Strict Attachment Policy: Every application attaches verified <strong className="text-amber-300">PDF CV</strong> (never HTML).</span>
+            </div>
+            <div className="text-slate-500 font-mono text-[10px]">
+              Tip: Resend Free sandbox delivers forward-ready drafts to {candidate.email}. Verify a custom domain in Resend for direct employer delivery.
+            </div>
+          </div>
+        </div>
+
         {/* Job Listings Grid */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-semibold text-slate-400">
-              Showing <span className="text-white font-bold">{filteredJobs.length}</span> positions
+              Showing <span className="text-white font-bold">{filteredJobs.length}</span> positions {hideApplied && appliedJobIds.size > 0 && <span className="text-emerald-400 text-xs">({appliedJobIds.size} already applied hidden)</span>}
             </span>
             <span className="text-xs text-slate-500">
               Scam Shield &amp; ATS Compatibility Active
@@ -511,16 +600,17 @@ export default function Home() {
               <AlertCircle className="w-10 h-10 text-slate-500 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-white mb-1">No Jobs Found</h3>
               <p className="text-xs sm:text-sm text-slate-400 mb-4">
-                No roles match your current search query or filter. Try clearing filters or scanning again.
+                No roles match your current search query or filter. Try clearing filters or resetting the view.
               </p>
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedFilter('all');
+                  setHideApplied(false);
                 }}
                 className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold px-4 py-2 rounded-lg transition"
               >
-                Reset Filters
+                Reset All Filters
               </button>
             </div>
           ) : (
@@ -530,6 +620,7 @@ export default function Home() {
                   key={job.id}
                   job={job}
                   isApplied={appliedJobIds.has(job.id)}
+                  applicationRecord={applications.find(a => a.jobId === job.id)}
                   onOpenApply={(selected) => setActiveApplyJob(selected)}
                 />
               ))}

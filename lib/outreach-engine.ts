@@ -5,7 +5,11 @@ export type OutreachSector =
   | 'QUANT_TRADING'
   | 'SATELLITE_INTELLIGENCE'
   | 'HIGH_CONCURRENCY_SAAS'
-  | 'GEOSPATIAL_LOGISTICS';
+  | 'GEOSPATIAL_LOGISTICS'
+  | 'GERMAN_FINTECH'
+  | 'GERMAN_CLOUD_SAAS'
+  | 'KUWAIT_GULF_FINTECH'
+  | 'GULF_QUANT_PROP';
 
 export interface OutreachTarget {
   id: string;
@@ -19,6 +23,8 @@ export interface OutreachTarget {
   candidateFlagshipUsed: string;
   urgencyHook: string;
   recommendedCV: 'FullStack' | 'Quant';
+  language?: 'de' | 'en' | 'ar';
+  region?: 'GERMANY' | 'KUWAIT_GULF' | 'GLOBAL' | 'US_AMERICAS';
 }
 
 export interface DiagnosticPitchPackage {
@@ -97,6 +103,66 @@ export const CURATED_OUTREACH_TARGETS: OutreachTarget[] = [
     urgencyHook: 'Your fleet dispatching is losing accuracy due to un-batched GPS websocket streaming.',
     recommendedCV: 'FullStack',
   },
+  {
+    id: 'outreach-target-de-1',
+    company: 'FinTech & Banking Infrastructure (Berlin / Frankfurt)',
+    domain: 'fintech-deutschland.de',
+    contactEmail: 'karriere@fintech-deutschland.de',
+    sector: 'GERMAN_FINTECH',
+    language: 'de',
+    region: 'GERMANY',
+    diagnosedProblem: 'Transaktions-Inkonsistenzen und Double-Spending-Risiken bei hochfrequenten parallelen Webhook-Zahlungsausgleichen.',
+    consequenceOfDelay: 'Ohne striktes Row-Level-Locking führen gleichzeitige Transaktionen zu Ledger-Differenzen und regulatorischen Compliance-Problemen.',
+    solvedBySystem: 'ChopOS deterministisches PostgreSQL Row-Level-Locking (SELECT ... FOR UPDATE) mit automatisierter Treuhand-Multi-Split-Zahlungsabwicklung.',
+    candidateFlagshipUsed: 'ChopOS Merchant POS & Escrow-Betriebssystem',
+    urgencyHook: 'Ihre Zahlungsabwicklung ist bei Spitzenlast ohne Row-Level-Locks anfällig für Race Conditions.',
+    recommendedCV: 'FullStack',
+  },
+  {
+    id: 'outreach-target-de-2',
+    company: 'Cloud Platforms & High-Throughput Microservices (München / Hamburg)',
+    domain: 'cloud-deutschland.de',
+    contactEmail: 'engineering@cloud-deutschland.de',
+    sector: 'GERMAN_CLOUD_SAAS',
+    language: 'de',
+    region: 'GERMANY',
+    diagnosedProblem: 'Latenz-Spitzen und blockierte Event-Loops bei parallelen Echtzeit-Datenströmen.',
+    consequenceOfDelay: 'Unzureichend entkoppelte Stream-Queues führen zu Latenz-Drifts und hohen Infrastrukturkosten.',
+    solvedBySystem: 'Resend Mission Control & Redis Streams entkoppelte Consumer-Group-Architektur mit sub-1ms Event-Verarbeitung.',
+    candidateFlagshipUsed: 'Resend Mission Control & Autonome Telemetrie-Engine',
+    urgencyHook: 'Ihre Microservice-Architektur verliert Durchsatz ohne entkoppelte Stream-Queues.',
+    recommendedCV: 'FullStack',
+  },
+  {
+    id: 'outreach-target-kw-1',
+    company: 'Kuwait Payment Gateways & FinTech Escrow (Kuwait City / GCC)',
+    domain: 'kuwait-fintech.kw',
+    contactEmail: 'tech@kuwait-fintech.kw',
+    sector: 'KUWAIT_GULF_FINTECH',
+    language: 'en',
+    region: 'KUWAIT_GULF',
+    diagnosedProblem: 'Settlement divergence and multi-currency reconciliation latency during high-volume merchant processing.',
+    consequenceOfDelay: 'Without strict row-level transactional isolation, high-volume GCC merchant payments suffer from reconciliation drift and audit discrepancies.',
+    solvedBySystem: 'ChopOS zero-discrepancy PostgreSQL ACID row-level locking with automated multi-split escrow routing.',
+    candidateFlagshipUsed: 'ChopOS Merchant POS & Sovereign Escrow Platform',
+    urgencyHook: 'Your payment escrow reconciliation is vulnerable during high-concurrency peak merchant hours.',
+    recommendedCV: 'FullStack',
+  },
+  {
+    id: 'outreach-target-kw-2',
+    company: 'Gulf Algorithmic Trading & Sovereign Wealth Desks (Kuwait / UAE)',
+    domain: 'gulf-quant.com',
+    contactEmail: 'recruiting@gulf-quant.com',
+    sector: 'GULF_QUANT_PROP',
+    language: 'en',
+    region: 'KUWAIT_GULF',
+    diagnosedProblem: 'Tick processing latency bleed and order execution slippage during high-volatility global market open overlaps.',
+    consequenceOfDelay: 'A 40ms execution lag during market open volatility erodes proprietary trading alpha into execution slippage.',
+    solvedBySystem: "GOD'S EYE algorithmic Two-Key Synthesis trading architecture streaming 73+ concurrent WebSocket feeds with FIX 4.4 and MetaTrader 5 gateways (<100ms execution latency).",
+    candidateFlagshipUsed: "GOD'S EYE Sovereign Market Intelligence & Trading Platform",
+    urgencyHook: 'Your order gateway latency is bleeding alpha during GCC & global market session overlaps.',
+    recommendedCV: 'Quant',
+  },
 ];
 
 export function generateDiagnosticPitch(target: OutreachTarget): DiagnosticPitchPackage {
@@ -105,7 +171,71 @@ export function generateDiagnosticPitch(target: OutreachTarget): DiagnosticPitch
   const cvFile = isQuant ? candidate.cvFiles.quant.filename : candidate.cvFiles.fullStack.filename;
   const cvName = isQuant ? candidate.cvFiles.quant.name : candidate.cvFiles.fullStack.name;
 
-  const subject = `Urgent Architecture Diagnostic for ${target.company} — ${target.urgencyHook}`;
+  if (target.language === 'de') {
+    const subject = `Architektur-Diagnose für ${target.company}: ${target.urgencyHook}`;
+    const fullBody = `Sehr geehrtes Engineering-Team bei ${target.company},
+
+ich wende mich direkt an Ihre technische Leitung bezüglich einer kritischen Architektur-Schwachstelle: ${target.diagnosedProblem}
+
+${target.consequenceOfDelay}
+
+Mein Name ist Olumide Adeyemi-Nana. Als Senior Full-Stack & Systems Architect mit fundierter Ingenieurausbildung (Obafemi Awolowo University) entwickle ich Software nach den Maßstäben kritischer Infrastruktur – mit klarem Fokus auf Latenz-Minimierung, Concurrency-Sicherheit und deterministische Fail-Safes.
+
+Ich habe die Lösung für diese Herausforderung bereits in Produktion gebaut und verifiziert:
+• Referenzsystem: ${target.candidateFlagshipUsed} (${target.solvedBySystem})
+• Verifizierter Benchmark: Null Dateninkonsistenz, deterministische PostgreSQL Row-Level-Locks und sub-100ms Ausführungszeit unter hoher Last.
+• Produktionsreferenzen und Live-Code:
+  - Portfolio: ${candidate.portfolioUrl}
+  - GitHub: ${candidate.githubUrl}
+  - Flaggschiff: GOD'S EYE Sovereign Intelligence & ChopOS POS Architecture
+
+Was ich ab sofort für ${target.company} leisten kann:
+1. Sofortiges technisches Audit Ihrer Daten-Pipelines und Concurrency-Handler.
+2. Beseitigung von Latenz-Engpässen und Race Conditions bei Transaktionen.
+3. Bereitstellung deterministischer, hochskalierbarer Systeme ohne explodierende Cloud-Kosten.
+4. Volle Zeitzonen-Synchronität: Ich arbeite aus der WAT-Zeitzone (GMT+1), zeitlich zu 100 % synchron mit Deutschland / MEZ (UTC+1).
+
+Im Anhang finden Sie meinen aktuellen Lebenslauf als PDF (${cvName} – ${cvFile}). Ich stehe ab sofort für ein 15-minütiges technisches Gespräch zur Verfügung.
+
+Kontakt:
+• E-Mail: ${candidate.email}
+• WhatsApp / Tel: ${candidate.phone}
+• Live-Portfolio: ${candidate.portfolioUrl}
+
+Mit freundlichen Grüßen,
+
+${candidate.name}
+${candidate.headline}
+GitHub: @Olumidenana`;
+
+    const hookPitch = `Sehr geehrtes Team bei ${target.company},
+
+${target.urgencyHook} ${target.consequenceOfDelay}
+
+Als Senior Systems Architect habe ich genau dieses Problem bereits in Produktion gelöst: ${target.candidateFlagshipUsed} (${target.solvedBySystem}). Ich arbeite aus GMT+1 (100% MEZ-synchron) und stehe ab sofort zur Verfügung. Live-Code: ${candidate.portfolioUrl} (GitHub: github.com/Olumidenana). Anbei mein Lebenslauf als PDF.`;
+
+    const mailtoUrl = `mailto:${target.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
+
+    return {
+      target,
+      subject,
+      hookPitch,
+      fullBody,
+      mailtoUrl,
+      recommendedCVFile: cvFile,
+      recommendedCVName: cvName,
+    };
+  }
+
+  // Kuwait / Gulf region customization
+  const isGulf = target.region === 'KUWAIT_GULF';
+  const gulfTimezoneNote = isGulf
+    ? `\n• Timezone Alignment: Working from WAT (GMT+1), I am only 2 hours from Kuwait/Gulf time (GMT+3), providing full-day real-time business overlap with Kuwait City, Dubai, and Riyadh.`
+    : '';
+
+  const subject = isGulf
+    ? `Technical Architecture Diagnostic for ${target.company} (Kuwait/Gulf GMT+3 Overlap) — ${target.urgencyHook}`
+    : `Urgent Architecture Diagnostic for ${target.company} — ${target.urgencyHook}`;
 
   const fullBody = `Dear ${target.company} Engineering Leadership,
 
@@ -126,7 +256,7 @@ I have already engineered and benchmarked the exact production solution to this 
 What I can do for ${target.company} this week:
 1. Conduct an immediate architectural audit of your data pipelines and concurrency handlers.
 2. Eliminate latency bottlenecks and double-spending race conditions.
-3. Deploy deterministic, high-throughput systems that scale seamlessly without ballooning cloud costs.
+3. Deploy deterministic, high-throughput systems that scale seamlessly without ballooning cloud costs.${gulfTimezoneNote}
 
 Attached is my ${cvName} (${cvFile}). I am available for immediate engagement and can deliver production improvements starting this week.
 
@@ -146,7 +276,7 @@ GitHub: @Olumidenana`;
 
 ${target.urgencyHook} If this is not resolved, ${target.consequenceOfDelay}
 
-I'm Olumide, a Full-Stack Systems Engineer and Sovereign Architecture Quant. I have already solved this in production with ${target.candidateFlagshipUsed} (${target.solvedBySystem}). You can inspect my live code at ${candidate.portfolioUrl} and github.com/Olumidenana. Attached is my ${cvName}. Let's connect for 15 minutes this week.`;
+I'm Olumide, a Full-Stack Systems Engineer and Sovereign Architecture Quant. I have already solved this in production with ${target.candidateFlagshipUsed} (${target.solvedBySystem}).${isGulf ? ' Available immediately with full GMT+3 Kuwait/Gulf business hours overlap.' : ''} You can inspect my live code at ${candidate.portfolioUrl} and github.com/Olumidenana. Attached is my ${cvName}. Let's connect for 15 minutes this week.`;
 
   const mailtoUrl = `mailto:${target.contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
 

@@ -45,14 +45,14 @@ export const DEFAULT_CANDIDATE: CandidateProfile = {
   ],
   cvFiles: {
     fullStack: {
-      name: 'Full-Stack Systems Architect CV',
-      filename: 'Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.html',
-      url: '/cv/Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.html',
+      name: 'Full-Stack Systems Architect CV (PDF)',
+      filename: 'Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf',
+      url: '/cv/Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf',
     },
     quant: {
-      name: 'Quant Algorithmic Engineer CV',
-      filename: 'Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.html',
-      url: '/cv/Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.html',
+      name: 'Quant Algorithmic Engineer CV (PDF)',
+      filename: 'Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf',
+      url: '/cv/Olumide_Adeyemi-Nana_Quant_Algorithmic_Engineer_CV.pdf',
     },
   },
   keyProjects: [

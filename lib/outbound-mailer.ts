@@ -36,11 +36,21 @@ export async function sendApplicationOnBehalf(
   const candidate = DEFAULT_CANDIDATE;
   const resendApiKey = process.env.RESEND_API_KEY;
 
-  // 1. Locate CV PDF on disk
-  const cvFilePath = path.join(process.cwd(), 'public', 'cv', pkg.recommendedCVFile);
+  // 1. Locate CV PDF on disk (strict PDF enforcement)
+  let cvFilename = pkg.recommendedCVFile || 'Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf';
+  if (cvFilename.endsWith('.html')) {
+    cvFilename = cvFilename.replace(/\.html$/i, '.pdf');
+  }
+
+  let cvFilePath = path.join(process.cwd(), 'public', 'cv', cvFilename);
   let cvBase64: string | undefined = undefined;
 
   try {
+    if (!fs.existsSync(cvFilePath)) {
+      // Fallback to verified existing PDF
+      cvFilename = 'Olumide_Adeyemi-Nana_FullStack_Systems_Architect_CV.pdf';
+      cvFilePath = path.join(process.cwd(), 'public', 'cv', cvFilename);
+    }
     if (fs.existsSync(cvFilePath)) {
       const fileBuffer = fs.readFileSync(cvFilePath);
       cvBase64 = fileBuffer.toString('base64');
@@ -102,7 +112,7 @@ ${pkg.fullCoverLetter}
       await paceResendDispatch(650);
 
       const attachments = cvBase64
-        ? [{ filename: pkg.recommendedCVFile, content: cvBase64 }]
+        ? [{ filename: cvFilename, content: cvBase64 }]
         : [];
 
       const senderEmail = process.env.EMAIL_FROM || 'Olumide Adeyemi-Nana <onboarding@resend.dev>';
@@ -162,7 +172,7 @@ ${pkg.fullCoverLetter}
           deliveryMode: isDirectCompany ? 'LIVE_COMPANY_INBOX' : 'SANDBOX_FORWARD_READY',
           mailtoUrl: pkg.mailtoUrl,
           subject: emailSubject,
-          cvAttached: pkg.recommendedCVFile,
+          cvAttached: cvFilename,
           bccConfirmation: candidate.email,
           mode: 'LIVE_DISPATCH',
           instructionsApplied: pkg.instructions.detectedInstructions,
@@ -185,7 +195,7 @@ ${pkg.fullCoverLetter}
             deliveryMode: 'SANDBOX_FORWARD_READY',
             mailtoUrl: pkg.mailtoUrl,
             subject: pkg.subject,
-            cvAttached: pkg.recommendedCVFile,
+            cvAttached: cvFilename,
             bccConfirmation: candidate.email,
             mode: 'SIMULATED_PREVIEW',
             instructionsApplied: pkg.instructions.detectedInstructions,
@@ -207,7 +217,7 @@ ${pkg.fullCoverLetter}
     deliveryMode: 'SANDBOX_FORWARD_READY',
     mailtoUrl: pkg.mailtoUrl,
     subject: pkg.subject,
-    cvAttached: pkg.recommendedCVFile,
+    cvAttached: cvFilename,
     bccConfirmation: candidate.email,
     mode: 'SIMULATED_PREVIEW',
     instructionsApplied: pkg.instructions.detectedInstructions,
