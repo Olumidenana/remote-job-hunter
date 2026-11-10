@@ -9,14 +9,16 @@
  * 5. 1500ms delay between sends (Gmail rate limit safety)
  */
 
-import dns from 'dns/promises';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTransport } from 'nodemailer';
+import {
+  ROOT, OUTBOX_PATH,
+  loadOutbox, saveOutbox, buildGuardSets, alreadyContacted, hasMXRecord, delay
+} from './outbox-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 
 // ── Credentials ────────────────────────────────────────────────────────────────
 const envLines = fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').split('\n');
@@ -51,16 +53,8 @@ const C = {
   linkedin: 'linkedin.com/in/olumideadeyemi-nana',
 };
 
-// ── DNS MX verification ────────────────────────────────────────────────────────
-async function hasMXRecord(email) {
-  const domain = email.split('@')[1];
-  try {
-    const records = await dns.resolveMx(domain);
-    return records.length > 0;
-  } catch {
-    return false;
-  }
-}
+// hasMXRecord, delay, loadOutbox, saveOutbox, buildGuardSets, alreadyContacted
+// all imported from outbox-utils.mjs
 
 // ── Cover letter generators ────────────────────────────────────────────────────
 function deCoverLetter(company, role) {
@@ -185,7 +179,6 @@ function saveOutbox(entries) {
   fs.writeFileSync(OUTBOX_PATH, JSON.stringify(entries, null, 2));
 }
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
 // ── Main ───────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('════════════════════════════════════════════════════════');
@@ -194,21 +187,17 @@ async function main() {
   console.log('════════════════════════════════════════════════════════\n');
 
   const outbox = loadOutbox();
-  const alreadySent = new Set(
-    outbox
-      .filter(e => e.deliveryMode === 'LIVE_COMPANY_INBOX')
-      .map(e => e.recipientEmail.toLowerCase())
-  );
-  console.log(`📬 Already sent to ${alreadySent.size} addresses (will skip)\n`);
+  // DUAL GUARD: skip if already sent to same EMAIL *or* same COMPANY NAME
+  const { alreadySentEmails, alreadySentCompanies } = buildGuardSets(outbox);
+  console.log(`📬 Already contacted: ${alreadySentEmails.size} emails / ${alreadySentCompanies.size} companies (skipping both)\n`);
 
   const newRecords = [];
   let sent = 0, skipped = 0, noMX = 0, failed = 0;
 
   for (const t of TARGETS) {
-    const emailLC = t.email.toLowerCase();
-
-    if (alreadySent.has(emailLC)) {
-      console.log(`⏭️  SKIP (already sent): ${t.company}`);
+    // Check BOTH email and company name
+    if (alreadyContacted(t, alreadySentEmails, alreadySentCompanies)) {
+      console.log(`⏭️  SKIP (already contacted): ${t.company} <${t.email}>`);
       skipped++;
       continue;
     }

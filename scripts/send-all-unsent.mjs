@@ -9,9 +9,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTransport } from 'nodemailer';
+import {
+  ROOT, loadOutbox, saveOutbox, buildGuardSets, alreadyContacted, normalizeCompany, hasMXRecord, delay
+} from './outbox-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 
 // ── Load .env.local ────────────────────────────────────────────────────────────
 const envLines = fs.readFileSync(path.join(ROOT, '.env.local'), 'utf8').split('\n');
@@ -247,18 +249,8 @@ ${C.name}
   },
 ];
 
-// ── Outbox helpers ─────────────────────────────────────────────────────────────
-const OUTBOX_PATH = path.join(ROOT, 'data/outbox.json');
-function loadOutbox() {
-  if (!fs.existsSync(OUTBOX_PATH)) return [];
-  try { return JSON.parse(fs.readFileSync(OUTBOX_PATH, 'utf8')); } catch { return []; }
-}
-function saveOutbox(entries) {
-  fs.mkdirSync(path.dirname(OUTBOX_PATH), { recursive: true });
-  fs.writeFileSync(OUTBOX_PATH, JSON.stringify(entries, null, 2), 'utf8');
-}
-
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+// ── Outbox helpers — now delegated to outbox-utils.mjs ────────────────────────
+// (legacy local copies kept for reference but overridden by imports above)
 
 // ── Main ───────────────────────────────────────────────────────────────────────
 async function main() {
@@ -267,22 +259,17 @@ async function main() {
   console.log('════════════════════════════════════════════════════════\n');
 
   const outbox = loadOutbox();
-  const alreadySent = new Set(
-    outbox
-      .filter(e => e.deliveryMode === 'LIVE_COMPANY_INBOX')
-      .map(e => e.recipientEmail.toLowerCase())
-  );
-
-  console.log(`📬 Already sent to ${alreadySent.size} addresses (skipping those)\n`);
+  // DUAL GUARD: skip if already sent to same EMAIL *or* same COMPANY NAME
+  const { alreadySentEmails, alreadySentCompanies } = buildGuardSets(outbox);
+  console.log(`📬 Already contacted: ${alreadySentEmails.size} emails / ${alreadySentCompanies.size} companies (skipping both)\n`);
 
   const newRecords = [];
   let sent = 0, skipped = 0, failed = 0;
 
   for (const target of ALL_TARGETS) {
-    const emailLC = target.email.toLowerCase();
-
-    if (alreadySent.has(emailLC)) {
-      console.log(`⏭️  SKIP: ${target.company} <${target.email}>`);
+    // Check BOTH email and company name — prevents duplicates even with different addresses
+    if (alreadyContacted(target, alreadySentEmails, alreadySentCompanies)) {
+      console.log(`⏭️  SKIP (already contacted): ${target.company} <${target.email}>`);
       skipped++;
       continue;
     }
@@ -328,7 +315,8 @@ async function main() {
         complianceNotes: ['send-all-unsent.mjs — Gmail SMTP port 465'],
       });
 
-      alreadySent.add(emailLC);
+      alreadySentEmails.add(target.email.toLowerCase());
+      alreadySentCompanies.add(normalizeCompany(target.company));
       sent++;
       await delay(1500);
     } catch (err) {

@@ -8,9 +8,11 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createTransport } from 'nodemailer';
+import {
+  ROOT, loadOutbox, saveOutbox, buildGuardSets, alreadyContacted, normalizeCompany, hasMXRecord, delay
+} from './outbox-utils.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
 
 // ── Load .env.local manually (ESM doesn't support dotenv require) ──────────────
 const envPath = path.join(ROOT, '.env.local');
